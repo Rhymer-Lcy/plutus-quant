@@ -65,16 +65,24 @@ Use as the free backbone (verify current free-tier limits at each vendor before 
 
 ## 4. Fundamentals & point-in-time universe
 
-- **SEC EDGAR** (data.sec.gov) — free, official fundamentals. Endpoints to be wired up:
-  company facts / company concept / submissions / frames; requires a descriptive
-  **User-Agent** header (name + email), not an API key. Map ticker→CIK first.
-  *(Endpoints to be confirmed against SEC developer docs when `sec_edgar.py` is implemented.)*
-- **Point-in-time index membership (survivorship-free):** the hard, free-data-weak part.
-  Free/approximate options: current S&P 500 from Wikipedia + its change history; community
-  GitHub reconstructions. Gold standard (CRSP / Norgate) is paid. See
-  [data_sources.md](data_sources.md). **Survivorship bias is the dominant correctness risk in
-  the free US stack** — flag any early backtest that lacks a clean PIT universe + delisted
-  prices.
+- **SEC EDGAR** (data.sec.gov) — free, official fundamentals. Endpoints (verified; wired up in
+  `data/sources/sec_edgar.py`), CIK zero-padded to 10 digits:
+  - ticker→CIK: `https://www.sec.gov/files/company_tickers.json`
+  - company facts: `https://data.sec.gov/api/xbrl/companyfacts/CIK{cik10}.json`
+  - company concept: `https://data.sec.gov/api/xbrl/companyconcept/CIK{cik10}/{taxonomy}/{tag}.json`
+  - frames: `https://data.sec.gov/api/xbrl/frames/{taxonomy}/{tag}/{unit}/CY{period}.json`
+  - **Mandatory descriptive User-Agent** (name + email), not an API key; **rate limit 10
+    req/s**. Source: [SEC EDGAR APIs](https://www.sec.gov/search-filings/edgar-application-programming-interfaces).
+    Income/cash-flow concepts are FLOWS → aggregate to TTM (the adapter synthesizes the
+    missing Q4 = 10-K annual − Q1−Q2−Q3); balance-sheet concepts are INSTANTs. Everything is
+    aligned to the `filed` date (PIT), never the fiscal-period `end`.
+- **Point-in-time index membership (survivorship-free):** the hard, free-data-weak part. Wired
+  up in `data/universe.py` from **fja05680/sp500**, "S&P 500 Historical Components & Changes"
+  (membership since 1996 as (date, comma-sep tickers) rows). Source:
+  [github.com/fja05680/sp500](https://github.com/fja05680/sp500). Gold standard (CRSP/Norgate)
+  is paid. **Survivorship bias is the dominant correctness risk in the free US stack** — this
+  gives PIT *membership*, but delisted *price* series still need sourcing (yfinance drops most
+  delisted tickers), so flag any early backtest that lacks both. See [data_sources.md](data_sources.md).
 
 ## 5. Backtest framework cross-check
 
