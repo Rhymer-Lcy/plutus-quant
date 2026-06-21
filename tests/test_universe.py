@@ -23,6 +23,20 @@ def test_members_asof_picks_latest_change_on_or_before():
     assert m("2021-06-01") == {"AAA", "DDD", "EEE"}
 
 
+def test_normalize_ticker():
+    assert u.normalize_ticker("AAPL") == "AAPL"
+    assert u.normalize_ticker("brk.b") == "BRK-B"          # class shares -> hyphen
+    assert u.normalize_ticker("AET-201811") == "AET"       # fja05680 delisted tag stripped
+    assert u.normalize_ticker(" tss-201907 ") == "TSS"
+
+
+def test_load_sp500_history_normalizes_tickers(tmp_path):
+    csv = tmp_path / "h.csv"
+    csv.write_text('date,tickers\n2019-01-02,"BRK.B,AET-201811,AAPL"\n', encoding="utf-8")
+    members = u.load_sp500_history(csv)[0][1]
+    assert members == frozenset({"BRK-B", "AET", "AAPL"})
+
+
 def test_load_sp500_history_parses_csv(tmp_path):
     csv = tmp_path / "hist.csv"
     csv.write_text(
@@ -36,6 +50,14 @@ def test_load_sp500_history_parses_csv(tmp_path):
     assert hist[0][0] == pd.Timestamp("1996-01-02")
     assert hist[0][1] == frozenset({"AAA", "BBB", "CCC"})
     assert hist[1][1] == frozenset({"AAA", "BBB", "DDD"})
+
+
+def test_union_members_over_window():
+    h = _history()   # 2020-01-01 {A,B,C}, 2020-06-01 {A,B,D}, 2021-01-01 {A,D,E}
+    # window covering the first two change dates: union of the set active at start + changes
+    assert u.union_members(h, "2020-01-01", "2020-12-31") == {"AAA", "BBB", "CCC", "DDD"}
+    # window starting mid-period picks up the then-active set, plus later changes in range
+    assert u.union_members(h, "2020-07-01", "2021-12-31") == {"AAA", "BBB", "DDD", "EEE"}
 
 
 def test_history_round_trips_through_members_asof(tmp_path):

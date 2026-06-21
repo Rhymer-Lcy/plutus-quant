@@ -19,6 +19,7 @@ LIMITATIONS (be honest about them — see docs/data_sources.md):
 from __future__ import annotations
 
 import bisect
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -33,6 +34,15 @@ SP500_HISTORY_URL = (
     "S%26P%20500%20Historical%20Components%20%26%20Changes.csv"
 )
 _DEFAULT_PATH = RAW_DIR / "sp500_history.csv"
+_DELISTED_TAG = re.compile(r"-\d{6}$")   # fja05680 marks names that left, e.g. AET-201811
+
+
+def normalize_ticker(ticker: str) -> str:
+    """Map an fja05680 symbol to the yahoo/SEC convention used everywhere downstream:
+    upper-case, drop the '-YYYYMM' delisted tag (AET-201811 -> AET), and write class shares
+    with a hyphen, not a dot (BRK.B -> BRK-B), which is what yfinance and SEC tickers use."""
+    t = _DELISTED_TAG.sub("", ticker.strip().upper())
+    return t.replace(".", "-")
 
 
 def fetch_sp500_history(dest: str | Path | None = None, refresh: bool = False) -> Path:
@@ -65,7 +75,7 @@ def load_sp500_history(path: str | Path | None = None) -> list[tuple[pd.Timestam
     history = []
     for _, row in df.iterrows():
         raw = str(row[tick_col]) if pd.notna(row[tick_col]) else ""
-        members = frozenset(t.strip().upper() for t in raw.split(",") if t.strip())
+        members = frozenset(normalize_ticker(t) for t in raw.split(",") if t.strip())
         history.append((pd.Timestamp(row[date_col]), members))
     return history
 
@@ -81,6 +91,18 @@ def members_asof_from_history(history: list[tuple[pd.Timestamp, frozenset]]):
         return set(sets[i]) if i >= 0 else set()
 
     return members_asof
+
+
+def union_members(history: list[tuple[pd.Timestamp, frozenset]], start, end) -> set:
+    """Every ticker that was a member at ANY point in [start, end] — the universe to pull
+    prices/fundamentals for, so a PIT backtest over the window has data for each name while it
+    was in the index (including names that later left). Includes the set active at `start`."""
+    start, end = pd.Timestamp(start), pd.Timestamp(end)
+    out: set = set(members_asof_from_history(history)(start))
+    for d, members in history:
+        if start <= d <= end:
+            out |= set(members)
+    return out
 
 
 def sp500_members_asof(path: str | Path | None = None, refresh: bool = False):

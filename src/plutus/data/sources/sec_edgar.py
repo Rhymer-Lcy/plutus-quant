@@ -179,6 +179,8 @@ def trailing_twelve_months(frame: pd.DataFrame) -> pd.DataFrame:
             q4_filed = max(a["filed"], *[r["filed"] for r in yr_qs])
             quarters.append({"fy": a["fy"], "end": a["end"], "filed": q4_filed, "val": q4_val})
 
+    if not quarters:                                 # no discrete quarters (e.g. annual-only filer)
+        return pd.DataFrame(columns=["end", "filed", "val"])
     qdf = pd.DataFrame(quarters).dropna(subset=["end", "val"])
     if qdf.empty:
         return pd.DataFrame(columns=["end", "filed", "val"])

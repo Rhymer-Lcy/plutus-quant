@@ -98,6 +98,16 @@ def test_prior_year_comparatives_do_not_corrupt_ttm():
     pd.testing.assert_frame_equal(a, b)
 
 
+def test_ttm_empty_when_no_discrete_quarters():
+    # an annual-only filer (no ~3-month quarters) must yield an empty TTM frame, not crash
+    facts = {"facts": {"us-gaap": {"NetIncomeLoss": {"units": {"USD": [
+        {"start": "2022-01-01", "end": "2022-12-31", "val": 500, "filed": "2023-02-15",
+         "fy": 2022, "fp": "FY", "form": "10-K", "frame": None},
+    ]}}}}}
+    out = se.trailing_twelve_months(se.concept_frame(facts, "NetIncomeLoss"))
+    assert out.empty and list(out.columns) == ["end", "filed", "val"]
+
+
 def test_build_fundamental_panel_instant_and_flow():
     facts_by_ticker = {"AAA": _facts()}
     dates = pd.bdate_range("2023-01-02", "2024-03-29")

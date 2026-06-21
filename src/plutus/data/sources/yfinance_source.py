@@ -52,7 +52,9 @@ def adjusted_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFra
         close = raw[["Close"]].rename(columns={"Close": tickers[0]})
     close.index = pd.to_datetime(close.index).tz_localize(None)
     close.index.name = "date"
-    return close.sort_index().dropna(how="all")
+    # drop all-NaN rows AND all-NaN columns (a column with no data = a ticker Yahoo lacks,
+    # e.g. delisted; keeping it as a NaN column would overstate universe coverage).
+    return close.sort_index().dropna(how="all").dropna(how="all", axis=1)
 
 
 def raw_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFrame:
@@ -74,4 +76,6 @@ def raw_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFrame:
         close = raw[["Close"]].rename(columns={"Close": tickers[0]})
     close.index = pd.to_datetime(close.index).tz_localize(None)
     close.index.name = "date"
-    return close.sort_index().dropna(how="all")
+    # drop all-NaN rows AND all-NaN columns (a column with no data = a ticker Yahoo lacks,
+    # e.g. delisted; keeping it as a NaN column would overstate universe coverage).
+    return close.sort_index().dropna(how="all").dropna(how="all", axis=1)
