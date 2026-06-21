@@ -26,10 +26,13 @@ biggest correctness risk in a free US data stack.
 
 Two distinct needs:
 
-1. **Delisted price series.** Yahoo drops most delisted tickers. Stooq has some; the clean
-   solution (Norgate / CRSP) is paid. The backtest engine already handles a name whose price
-   series ends — it force-liquidates at the last real bar (`portfolio.valuation_panel`) — so
-   the gap is *data availability*, not engine logic.
+1. **Delisted price series.** Yahoo drops most delisted tickers. Stooq retains some, BUT its
+   free CSV endpoint is currently behind a JavaScript bot-check (verified 2026-06-21) and so
+   is best-effort only via plain HTTP (`stooq_source` degrades to empty when challenged) — it
+   does not currently close the delisted-price gap. The clean solution (Norgate / CRSP) is
+   paid. The backtest engine already handles a name whose price series ends — it
+   force-liquidates at the last real bar (`portfolio.valuation_panel`) — so the gap is *data
+   availability*, not engine logic. **This remains the top open data problem.**
 2. **Point-in-time index membership.** "What was in the S&P 500 on 2018-03-31?" Free options:
    the current constituents from Wikipedia plus its change history, and community-maintained
    reconstructions on GitHub. These are approximate; the gold standard (CRSP/Norgate) is paid.

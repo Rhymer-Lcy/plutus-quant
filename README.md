@@ -74,7 +74,7 @@ Free-tier first (the US analog of hermes starting on anonymous BaoStock):
 | **yfinance** (Yahoo) | none | free daily adjusted OHLCV backbone — start here ✓ |
 | **SEC EDGAR** | User-Agent header (free) | official fundamentals for value/quality factors ✓ |
 | **fja05680/sp500** | none | point-in-time S&P 500 membership (survivorship-free universe) ✓ |
-| **Stooq** | none | free CSV daily bars — independent cross-check (planned) |
+| **Stooq** | none | daily CSV cross-check / partial delisted coverage — adapter built, but the endpoint is currently behind a JS bot-check (best-effort) ⚠ |
 | **Alpaca** | free key | paper-trading account + EOD/data API (planned) |
 | **Tiingo** | free key | cleaner EOD source, rate-limited (optional) |
 
