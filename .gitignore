@@ -1,0 +1,34 @@
+# secrets — ignore every dotenv variant, keep only the committed template
+.env
+.env.*
+!.env.template
+
+# local data lake & caches (large, regenerable) — anchored to repo root so the
+# `plutus/data/` source package is NOT ignored, only the top-level data lake.
+/data/
+/results/
+*.joblib
+*.parquet
+
+# editable-installed cross-check frameworks (separate repos, not vendored). Ignore
+# everything under external/ except tracked metadata, so a stray file dropped there
+# is not silently staged by `git add external/`.
+external/*
+!external/README.md
+!external/versions.lock
+
+# notebooks: scratch — never commit cell outputs (data/secrets leak surface)
+notebooks/*.ipynb
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

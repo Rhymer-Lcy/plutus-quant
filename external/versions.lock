@@ -1,0 +1,4 @@
+# Pinned commits of editable-installed external checkouts (for reproducible cross-checks).
+# Format: <name> <git-url> <commit-sha>
+# Fill in when you clone + pin a framework. Example:
+# zipline-reloaded https://github.com/stefan-jansen/zipline-reloaded.git <sha>

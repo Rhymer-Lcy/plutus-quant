@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "plutus-quant"
+description = "US-equity quantitative research, backtest and paper-trading system (codename Plutus)."
+requires-python = ">=3.12"
+readme = "README.md"
+authors = [{ name = "Rhymer-Lcy" }]
+dynamic = ["version"]
+classifiers = [
+    "Private :: Do Not Upload",  # hard-blocks accidental PyPI publish
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy",
+    "pandas<3",
+    "scipy",
+    "scikit-learn",
+    "lightgbm",
+    "pyarrow",
+    "matplotlib",
+    "requests",      # SEC EDGAR + Stooq CSV
+    "yfinance",      # free daily price backbone
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+notebooks = ["jupyterlab"]
+# Paper/live trading via Alpaca (kept optional so research installs stay lean).
+broker = ["alpaca-py"]
+# zipline-reloaded is installed editable from ./external as an INDEPENDENT friction
+# cross-check (the RQAlpha analog), kept out of `dependencies` so it never gates research.
+
+[project.urls]
+Repository = "https://github.com/Rhymer-Lcy/plutus-quant"
+
+[tool.setuptools.dynamic]
+version = { attr = "plutus.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["plutus*"]
+
+[tool.setuptools.package-data]
+plutus = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
