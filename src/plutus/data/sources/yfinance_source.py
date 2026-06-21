@@ -53,3 +53,25 @@ def adjusted_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFra
     close.index = pd.to_datetime(close.index).tz_localize(None)
     close.index.name = "date"
     return close.sort_index().dropna(how="all")
+
+
+def raw_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFrame:
+    """Wide (date x ticker) UNADJUSTED close panel — the actual traded price each day.
+
+    Use this (NOT the adjusted panel) for MARKET CAP = raw_close * shares_outstanding: shares
+    outstanding from SEC are as-reported (not split-adjusted), so they must be paired with the
+    unadjusted price to stay on the same basis. The adjusted panel is for returns/backtesting;
+    mixing adjusted price with as-reported shares would jump market cap at every split."""
+    if not tickers:
+        return pd.DataFrame()
+    raw = yf.download(tickers, start=start, end=end, auto_adjust=False, progress=False,
+                      group_by="column", threads=True)
+    if raw.empty:
+        return pd.DataFrame()
+    if isinstance(raw.columns, pd.MultiIndex):
+        close = raw["Close"].copy()
+    else:
+        close = raw[["Close"]].rename(columns={"Close": tickers[0]})
+    close.index = pd.to_datetime(close.index).tz_localize(None)
+    close.index.name = "date"
+    return close.sort_index().dropna(how="all")

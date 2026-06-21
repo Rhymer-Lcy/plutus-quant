@@ -74,6 +74,30 @@ def test_ttm_is_dated_by_latest_component_filing():
     assert filed_by_end[pd.Timestamp("2022-12-31")] == pd.Timestamp("2023-02-15")
 
 
+def _facts_with_comparatives() -> dict:
+    """The same facts, but with FY2022 Q1/Q2 ALSO reported as prior-year comparatives inside
+    the FY2023 10-Qs (a later `filed` date) — exactly what company facts contains in practice."""
+    base = _facts()
+    usd = base["facts"]["us-gaap"]["NetIncomeLoss"]["units"]["USD"]
+    comparatives = [
+        {"start": "2022-01-01", "end": "2022-03-31", "val": 100, "filed": "2023-04-30",
+         "fy": 2023, "fp": "Q1", "form": "10-Q", "frame": None},
+        {"start": "2022-04-01", "end": "2022-06-30", "val": 110, "filed": "2023-07-31",
+         "fy": 2023, "fp": "Q2", "form": "10-Q", "frame": None},
+    ]
+    base["facts"]["us-gaap"]["NetIncomeLoss"]["units"]["USD"] = usd + comparatives
+    return base
+
+
+def test_prior_year_comparatives_do_not_corrupt_ttm():
+    # regression: comparatives must be deduped to the FIRST filing of each period, so they
+    # change neither the TTM values nor (critically) their filed dates.
+    a = se.trailing_twelve_months(se.concept_frame(_facts(), "NetIncomeLoss")).reset_index(drop=True)
+    b = se.trailing_twelve_months(
+        se.concept_frame(_facts_with_comparatives(), "NetIncomeLoss")).reset_index(drop=True)
+    pd.testing.assert_frame_equal(a, b)
+
+
 def test_build_fundamental_panel_instant_and_flow():
     facts_by_ticker = {"AAA": _facts()}
     dates = pd.bdate_range("2023-01-02", "2024-03-29")
