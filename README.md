@@ -11,9 +11,11 @@ model, data adapters, universe, and execution are all market-specific.
 > combiner, cross-sectional backtest engine, position sizing, idempotent paper ledger) is
 > ported and unit-tested. The US data layer (yfinance price backbone, **SEC EDGAR
 > fundamentals**, **point-in-time S&P 500 membership**) and the US friction model are in place
-> and tested. Next: source delisted price series, then run the first survivorship-free factor
-> studies. No alpha has been researched yet — the strategy in `live/strategy.py` is a
-> *starting prior to test*, not validated.
+> and tested, and a **first end-to-end PIT S&P 500 factor study** runs on real data
+> ([docs/first_study.md](docs/first_study.md)) — a capability readout with a known ~16%
+> survivorship gap, NOT a tradeable result. Next: source delisted price series (the gating data
+> problem), broaden the universe, and run walk-forward OOS. No alpha has been researched yet —
+> the strategy in `live/strategy.py` is a *starting prior to test*, not validated.
 
 ## Architecture
 
