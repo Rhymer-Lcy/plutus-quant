@@ -9,10 +9,11 @@ model, data adapters, universe, and execution are all market-specific.
 
 > Status: **scaffold**. The market-agnostic research core (factor eval, walk-forward ML
 > combiner, cross-sectional backtest engine, position sizing, idempotent paper ledger) is
-> ported and unit-tested. The US data layer (yfinance price backbone) and the US friction
-> model are in place; SEC EDGAR fundamentals and a point-in-time universe are next. No alpha
-> has been researched yet — the strategy in `live/strategy.py` is a *starting prior to test*,
-> not validated.
+> ported and unit-tested. The US data layer (yfinance price backbone, **SEC EDGAR
+> fundamentals**, **point-in-time S&P 500 membership**) and the US friction model are in place
+> and tested. Next: source delisted price series, then run the first survivorship-free factor
+> studies. No alpha has been researched yet — the strategy in `live/strategy.py` is a
+> *starting prior to test*, not validated.
 
 ## Architecture
 
@@ -70,9 +71,10 @@ Free-tier first (the US analog of hermes starting on anonymous BaoStock):
 
 | Source | Auth | Role |
 |---|---|---|
-| **yfinance** (Yahoo) | none | free daily adjusted OHLCV backbone — start here |
+| **yfinance** (Yahoo) | none | free daily adjusted OHLCV backbone — start here ✓ |
+| **SEC EDGAR** | User-Agent header (free) | official fundamentals for value/quality factors ✓ |
+| **fja05680/sp500** | none | point-in-time S&P 500 membership (survivorship-free universe) ✓ |
 | **Stooq** | none | free CSV daily bars — independent cross-check (planned) |
-| **SEC EDGAR** | User-Agent header (free) | official fundamentals for value/quality factors (planned) |
 | **Alpaca** | free key | paper-trading account + EOD/data API (planned) |
 | **Tiingo** | free key | cleaner EOD source, rate-limited (optional) |
 
@@ -86,7 +88,8 @@ free point-in-time S&P 500 / Nasdaq-100 membership history is hard to assemble c
 src/plutus/        the engine — importable package (src-layout); no trading-framework dependency
   config.py        secret/token loading (env → .env.local)
   paths.py, io.py  on-disk locations; atomic file writes
-  data/            vendor adapters (yfinance; Stooq/SEC-EDGAR planned) → adjusted parquet lake
+  data/            sources/ (yfinance prices, SEC EDGAR fundamentals; Stooq planned);
+                   universe.py (point-in-time S&P 500 membership) → adjusted parquet lake
   research/
     backtest/      friction-faithful backtest: frictions (US), portfolio, sizing
     factors/       factor library (value, reversal, momentum, low-vol, quality, size)
