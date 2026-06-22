@@ -23,6 +23,7 @@ dependencies = [
     "matplotlib",
     "requests",      # SEC EDGAR + Stooq CSV
     "yfinance",      # free daily price backbone
+    "openpyxl",      # read CRSP S&P 500 constituents .xlsx (data/sources/crsp_source)
 ]
 
 [project.optional-dependencies]
