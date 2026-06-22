@@ -138,21 +138,18 @@ def point_in_time_series(frame: pd.DataFrame, dates) -> pd.Series:
     return full.reindex(dates).astype(float)
 
 
-def trailing_twelve_months(frame: pd.DataFrame) -> pd.DataFrame:
-    """Convert a FLOW concept's quarterly + annual facts into trailing-twelve-month values,
-    each tagged with the FILING date it became fully known. Returns columns (end, filed, val)
-    so it composes directly with `point_in_time_series`.
+def discrete_quarters(frame: pd.DataFrame) -> pd.DataFrame:
+    """Per-fiscal-quarter discrete flow values from a flow concept, each tagged with the FILING
+    date it became known. Returns columns (end, filed, val), sorted by period end.
 
-    Method: keep discrete ~3-month quarters; synthesize the missing Q4 of each fiscal year as
-    (10-K annual) - (that year's Q1+Q2+Q3); then sum each trailing 4 consecutive quarters
-    (requiring the 4 to span ~1 year, so a gap doesn't silently produce a wrong TTM). The TTM
-    is dated by the latest `filed` among its 4 component quarters.
+    Keeps ~3-month facts (incl. Apple's 14-week 98d quarters) and synthesizes the missing Q4 of
+    each fiscal year as (10-K annual) − (that year's Q1+Q2+Q3).
 
     CRITICAL: company facts repeat each period as a PRIOR-YEAR COMPARATIVE in later filings,
     each carrying that later filing's `filed` date. We dedupe every period by (start, end) and
-    keep the EARLIEST filing -- i.e. when the number was FIRST made public -- which is both the
-    honest point-in-time value (you trade on what you knew) and what keeps the `filed` dates
-    correct (a comparative would otherwise back-date a quarter to a much later filing)."""
+    keep the EARLIEST filing — when the number was FIRST made public — which is both the honest
+    point-in-time value and what keeps `filed` dates correct (a comparative would otherwise
+    back-date a quarter)."""
     if frame.empty:
         return pd.DataFrame(columns=["end", "filed", "val"])
     f = frame.dropna(subset=["start", "end", "filed", "val", "fy"]).copy()
@@ -160,13 +157,10 @@ def trailing_twelve_months(frame: pd.DataFrame) -> pd.DataFrame:
         return pd.DataFrame(columns=["end", "filed", "val"])
     f["dur"] = (f["end"] - f["start"]).dt.days
 
-    # discrete quarters: ~3 months (incl. Apple's 14-week 98d quarters); dedupe each (start,end)
-    # period to its FIRST filing (drops prior-year comparatives, fixes filed dates).
     q = (f[(f["dur"] >= 85) & (f["dur"] <= 100)]
          .sort_values("filed").drop_duplicates(["start", "end"], keep="first"))
     quarters = q[["fy", "end", "filed", "val"]].to_dict("records")
 
-    # synthesize Q4 = FY annual - (Q1+Q2+Q3) for any fiscal year missing a 4th quarter
     annual = (f[(f["dur"] >= 340) & (f["dur"] <= 380)]
               .sort_values("filed").drop_duplicates(["start", "end"], keep="first"))
     by_year: dict = {}
@@ -185,15 +179,26 @@ def trailing_twelve_months(frame: pd.DataFrame) -> pd.DataFrame:
     if qdf.empty:
         return pd.DataFrame(columns=["end", "filed", "val"])
     qdf = qdf.drop_duplicates("end", keep="last").sort_values("end").reset_index(drop=True)
+    return qdf[["end", "filed", "val"]]
 
+
+def trailing_twelve_months(frame: pd.DataFrame) -> pd.DataFrame:
+    """Trailing-twelve-month values of a FLOW concept (e.g. net income), each tagged with the
+    FILING date it became fully known. Returns (end, filed, val), composes with
+    `point_in_time_series`. Sums each trailing 4 CONSECUTIVE discrete quarters (a ~3-month gap
+    check, so a hole doesn't produce a wrong TTM); the TTM is dated by the latest component's
+    filing."""
+    qdf = discrete_quarters(frame)
+    if qdf.empty:
+        return pd.DataFrame(columns=["end", "filed", "val"])
+    qdf = qdf.reset_index(drop=True)
     out = []
     for i in range(3, len(qdf)):
         win = qdf.iloc[i - 3:i + 1]
         ends = win["end"].tolist()
         gaps = [(ends[k] - ends[k - 1]).days for k in range(1, 4)]
         if all(80 <= g <= 105 for g in gaps):        # 4 consecutive quarters (~3 mo apart), no gap
-            out.append({"end": ends[-1],
-                        "filed": win["filed"].max(),
+            out.append({"end": ends[-1], "filed": win["filed"].max(),
                         "val": float(win["val"].sum())})
     return pd.DataFrame(out, columns=["end", "filed", "val"])
 
