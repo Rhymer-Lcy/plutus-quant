@@ -33,10 +33,13 @@ model, data adapters, universe, and execution are all market-specific.
 > alternative signals. First such test — **PEAD** (post-earnings-announcement drift,
 > [docs/pead_study.md](docs/pead_study.md)) — is the first signal with a *pulse*: a positive,
 > near-significant SUE rank IC (t≈0.9) with ~zero market beta, unlike the flat/negative
-> valuation factors — but its long-short still loses after costs in a large-cap monthly form
-> (the drift is front-loaded in the first days and decayed in large caps). Realistic edge would
-> need faster (event-time) execution and/or smaller caps. No validated alpha — `live/strategy.py`
-> is a prior, not a recommendation.
+> valuation factors. Re-run on the **event clock** ([docs/pead_event_study.md](docs/pead_event_study.md))
+> the drift is confirmed real and front-loaded (CAAR: a clean +0.68% extreme-quintile drift
+> peaking ~day 40, ~90% of it by day 20) — but net of costs it sits exactly on the cost boundary
+> (only extreme surprises held ~10 days is marginally positive, Sharpe ~0.07; longer/looser
+> loses). An anomaly at the cost boundary is *why* it persists. Realistic edge would need smaller
+> caps / faster entry / a sharper surprise (data+infra steps). No validated alpha —
+> `live/strategy.py` is a prior, not a recommendation.
 
 ## Architecture
 
