@@ -9,13 +9,14 @@ model, data adapters, universe, and execution are all market-specific.
 
 > Status: **scaffold**. The market-agnostic research core (factor eval, walk-forward ML
 > combiner, cross-sectional backtest engine, position sizing, idempotent paper ledger) is
-> ported and unit-tested. The US data layer (yfinance price backbone, **SEC EDGAR
-> fundamentals**, **point-in-time S&P 500 membership**) and the US friction model are in place
-> and tested, and a **first end-to-end PIT S&P 500 factor study** runs on real data
-> ([docs/first_study.md](docs/first_study.md)) — a capability readout with a known ~16%
-> survivorship gap, NOT a tradeable result. Next: source delisted price series (the gating data
-> problem), broaden the universe, and run walk-forward OOS. No alpha has been researched yet —
-> the strategy in `live/strategy.py` is a *starting prior to test*, not validated.
+> ported and unit-tested. The US data layer (yfinance, **SEC EDGAR fundamentals**, **PIT S&P
+> 500 membership**) and the US friction model are in place and tested. Backtests now run on a
+> **survivorship-free CRSP lake** (total-return, delisting-aware prices + PIT membership by
+> PERMNO; bring-your-own licensed extract). Measured impact: survivorship bias had inflated the
+> candidate strategy's CAGR from a true ~8% to a fake ~21% and hid 14 pts of drawdown — and the
+> full-history run reveals an −88% 2008 near-ruin the biased data couldn't show
+> ([docs/survivorship_study.md](docs/survivorship_study.md)). No alpha yet — the strategy in
+> `live/strategy.py` is an *unvalidated prior*; next is a risk overlay + walk-forward OOS.
 
 ## Architecture
 
@@ -75,7 +76,8 @@ Free-tier first (the US analog of hermes starting on anonymous BaoStock):
 |---|---|---|
 | **yfinance** (Yahoo) | none | free daily adjusted OHLCV backbone — start here ✓ |
 | **SEC EDGAR** | User-Agent header (free) | official fundamentals for value/quality factors ✓ |
-| **fja05680/sp500** | none | point-in-time S&P 500 membership (survivorship-free universe) ✓ |
+| **fja05680/sp500** | none | point-in-time S&P 500 membership (free universe) ✓ |
+| **CRSP** (via WRDS) | bring-your-own licensed extract | survivorship-free total-return prices + PIT membership — the backtest backbone ✓ |
 | **Stooq** | none | daily CSV cross-check / partial delisted coverage — adapter built, but the endpoint is currently behind a JS bot-check (best-effort) ⚠ |
 | **Alpaca** | free key | paper-trading account + EOD/data API (planned) |
 | **Tiingo** | free key | cleaner EOD source, rate-limited (optional) |
