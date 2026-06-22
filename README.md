@@ -15,8 +15,13 @@ model, data adapters, universe, and execution are all market-specific.
 > PERMNO; bring-your-own licensed extract). Measured impact: survivorship bias had inflated the
 > candidate strategy's CAGR from a true ~8% to a fake ~21% and hid 14 pts of drawdown — and the
 > full-history run reveals an −88% 2008 near-ruin the biased data couldn't show
-> ([docs/survivorship_study.md](docs/survivorship_study.md)). No alpha yet — the strategy in
-> `live/strategy.py` is an *unvalidated prior*; next is a risk overlay + walk-forward OOS.
+> ([docs/survivorship_study.md](docs/survivorship_study.md)). A multi-factor walk-forward ML
+> combiner + a market-regime risk overlay were then tested
+> ([docs/multifactor_study.md](docs/multifactor_study.md)): the regime filter is crash insurance
+> (−88%→−43% in 2008) but whipsaws in bulls; the ML combiner modestly beats the fixed candidate
+> — **but a passive S&P 500 buy-and-hold beats every long-only variant on CAGR, Sharpe and
+> Calmar.** Honest read: long-only large-cap factors don't beat the index; next is long/short,
+> a broader universe, and better signals. No validated alpha — `live/strategy.py` is a prior.
 
 ## Architecture
 
