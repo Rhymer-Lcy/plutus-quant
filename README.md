@@ -24,9 +24,13 @@ model, data adapters, universe, and execution are all market-specific.
 > ([docs/longshort_study.md](docs/longshort_study.md)), every classic factor's net-of-cost
 > spread is ≈0 or negative (only quality barely positive) and the ML combiner overfits to
 > negative — **no tradeable edge in classic factors on large-cap US after rigor** (the known
-> "factors are arbitraged" result). The durable output is a methodology that tells the truth;
-> the honest frontier is smaller-cap / alternative signals. No validated alpha —
-> `live/strategy.py` is a prior, not a recommendation.
+> "factors are arbitraged" result). The "go smaller" escape hatch was then tested too
+> ([docs/smallcap_study.md](docs/smallcap_study.md)) on a broad 11,219-stock survivorship-free
+> universe (mid/small band): at realistic small-cap costs every price factor is negative
+> (Sharpe −0.34 to −0.38) — the only gross-positive one (reversal) is a 313%/mo turnover
+> illusion. So classic factors have no tradeable edge in US equities, **large OR small cap**.
+> The durable output is a methodology that tells the truth; the honest frontier is non-classic /
+> alternative signals. No validated alpha — `live/strategy.py` is a prior, not a recommendation.
 
 ## Architecture
 
