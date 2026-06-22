@@ -109,6 +109,64 @@ def stream_filtered(zip_path: str | Path, permnos: set, start, end,
     return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
 
 
+def stream_universe(zip_path: str | Path, start, end, price_min: float = 5.0,
+                    cap_min_000: float = 100_000.0, block_size: int = 64 << 20) -> pd.DataFrame:
+    """Stream the daily CSV keeping ALL tradable COMMON stocks (not just an index) — used to
+    build a broad small/mid-cap universe. Per-batch filter: common stock (SecurityType EQTY,
+    SecuritySubType COM) on a major exchange (NYSE/AMEX/NASDAQ = N/A/Q), with DlyClose >=
+    `price_min` (drops penny stocks) and DlyCap >= `cap_min_000` (in $000s; drops micro-caps
+    that can't really be traded/borrowed). Price/cap are read as floats for the filter; the
+    rest as strings. Returns a tidy long DataFrame."""
+    str_cols = ["PERMNO", "DlyCalDt", "Ticker", "DlyRet", "SecurityType", "SecuritySubType", "PrimaryExch"]
+    cols = str_cols + ["DlyClose", "DlyCap"]
+    conv = pacsv.ConvertOptions(
+        include_columns=cols,
+        column_types={**{c: pa.string() for c in str_cols},
+                      "DlyClose": pa.float64(), "DlyCap": pa.float64()})
+    exch = pa.array(["N", "A", "Q"], type=pa.string())
+    parts: list[pa.Table] = []
+    with zipfile.ZipFile(zip_path) as z:
+        inner = _inner_csv_name(z)
+        with z.open(inner) as f:
+            reader = pacsv.open_csv(f, read_options=pacsv.ReadOptions(block_size=block_size),
+                                    convert_options=conv)
+            for batch in reader:
+                t = pa.Table.from_batches([batch])
+                mask = pc.and_kleene(
+                    pc.and_kleene(pc.equal(t["SecurityType"], "EQTY"),
+                                  pc.equal(t["SecuritySubType"], "COM")),
+                    pc.and_kleene(pc.is_in(t["PrimaryExch"], value_set=exch),
+                                  pc.and_kleene(pc.greater_equal(t["DlyClose"], price_min),
+                                                pc.greater_equal(t["DlyCap"], cap_min_000))))
+                t = t.filter(mask)
+                if t.num_rows:
+                    parts.append(t.drop_columns(["SecurityType", "SecuritySubType", "PrimaryExch"]))
+    if not parts:
+        return pd.DataFrame()
+    df = pa.concat_tables(parts).to_pandas()
+    df["PERMNO"] = pd.to_numeric(df["PERMNO"], errors="coerce").astype("int64")
+    df["date"] = pd.to_datetime(df["DlyCalDt"], errors="coerce")
+    df["DlyRet"] = pd.to_numeric(df["DlyRet"], errors="coerce")
+    df = df.dropna(subset=["date"])
+    df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
+    return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
+
+
+def size_band_members_asof(mktcap: pd.DataFrame, exclude_top: int = 500, band_size: int = 2500):
+    """Build `members_asof(date) -> set[str PERMNO]` = the cap-rank BAND [exclude_top,
+    exclude_top+band_size) of `mktcap` on that date — i.e. drop the largest `exclude_top` names
+    (the mega/large caps) and keep the next `band_size` (the mid/small caps). Uses the latest
+    cap row on/before the query date."""
+    def members_asof(date) -> set:
+        s = mktcap.loc[:pd.Timestamp(date)]
+        if s.empty:
+            return set()
+        row = s.iloc[-1].dropna().sort_values(ascending=False)
+        return set(row.index[exclude_top:exclude_top + band_size])
+
+    return members_asof
+
+
 # --- panel builders (pure, unit-tested) --------------------------------------------
 
 def build_tr_adjusted_close(long: pd.DataFrame) -> pd.DataFrame:

@@ -72,6 +72,34 @@ def test_latest_ticker_map():
     assert crsp.latest_ticker_map(_long()) == {1: "AAA", 2: "BBB"}
 
 
+def test_size_band_members_asof():
+    dates = pd.to_datetime(["2020-01-31"])
+    cap = pd.DataFrame({"A": [500.0], "B": [400.0], "C": [300.0], "D": [200.0], "E": [100.0]},
+                       index=dates)
+    m = crsp.size_band_members_asof(cap, exclude_top=1, band_size=2)
+    assert m("2020-02-15") == {"B", "C"}        # drop largest (A), take next 2 by cap
+    m_all = crsp.size_band_members_asof(cap, exclude_top=0, band_size=3)
+    assert m_all("2020-01-31") == {"A", "B", "C"}
+
+
+def test_stream_universe_filters_common_major_priced(tmp_path):
+    csv = (
+        "PERMNO,DlyCalDt,Ticker,DlyRet,SecurityType,SecuritySubType,PrimaryExch,DlyClose,DlyCap\n"
+        "10,2020-01-02,KEEP1,0.01,EQTY,COM,N,50.0,200000\n"   # keep: common, NYSE, $50, $200M
+        "20,2020-01-02,LOWPX,0.01,EQTY,COM,Q,3.0,200000\n"    # drop: price < $5
+        "30,2020-01-02,MICRO,0.01,EQTY,COM,Q,50.0,50000\n"    # drop: cap < $100M
+        "40,2020-01-02,PREF,0.01,EQTY,PFD,N,50.0,200000\n"    # drop: not common (preferred)
+        "50,2020-01-02,OTC,0.01,EQTY,COM,P,50.0,200000\n"     # drop: not a major exchange
+        "60,2020-01-02,KEEP2,0.01,EQTY,COM,A,10.0,150000\n"   # keep: common, AMEX, $10, $150M
+    )
+    zp = tmp_path / "u.csv.zip"
+    with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("u.csv", csv)
+    out = crsp.stream_universe(zp, "2020-01-01", "2020-12-31", price_min=5.0, cap_min_000=100000.0)
+    assert set(out["PERMNO"]) == {10, 60}
+    assert "SecurityType" not in out.columns           # filter cols dropped
+
+
 def test_stream_filtered_from_zip(tmp_path):
     csv = (
         "PERMNO,DlyCalDt,Ticker,DlyClose,DlyRet,DlyCap,ShrOut\n"
