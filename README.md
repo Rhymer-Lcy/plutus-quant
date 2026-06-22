@@ -37,9 +37,13 @@ model, data adapters, universe, and execution are all market-specific.
 > the drift is confirmed real and front-loaded (CAAR: a clean +0.68% extreme-quintile drift
 > peaking ~day 40, ~90% of it by day 20) — but net of costs it sits exactly on the cost boundary
 > (only extreme surprises held ~10 days is marginally positive, Sharpe ~0.07; longer/looser
-> loses). An anomaly at the cost boundary is *why* it persists. Realistic edge would need smaller
-> caps / faster entry / a sharper surprise (data+infra steps). No validated alpha —
-> `live/strategy.py` is a prior, not a recommendation.
+> loses). Pushed into **mid/small caps** ([docs/smallcap_pead_study.md](docs/smallcap_pead_study.md))
+> the drift is ~2× larger (CAAR +1.3% vs +0.68%) and — **the first real gross edge in the
+> project** — a 10-day event long-short returns ~+10%/yr at Sharpe 0.41 *at low cost*; but at
+> realistic small-cap frictions (wide spreads + ~3%/yr borrow) it flips negative. So the
+> conclusion shifts from "no signal" to "a signal gated by execution cost." The path to push it
+> over the line: a sharper surprise (IBES analyst consensus) + borrow/cost-aware selection. No
+> validated alpha yet — `live/strategy.py` is a prior, not a recommendation.
 
 ## Architecture
 

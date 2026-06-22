@@ -82,14 +82,18 @@ def load_ticker_cik_map(refresh: bool = False) -> dict[str, int]:
     return out
 
 
-def company_facts(cik: int | str, refresh: bool = False) -> dict:
-    """Full XBRL company-facts JSON for one CIK. Cached to data/fundamentals/CIK{cik10}.json."""
+def company_facts(cik: int | str, refresh: bool = False, cache: bool = True) -> dict:
+    """Full XBRL company-facts JSON for one CIK. Cached to data/fundamentals/CIK{cik10}.json by
+    default; pass cache=False to fetch-and-discard (for bulk one-off pulls over thousands of
+    small-caps, to avoid filling the disk with JSON we won't reuse)."""
     c10 = cik10(cik)
-    cache = FUNDAMENTALS_DIR / f"CIK{c10}.json"
-    if refresh or not cache.exists():
+    if not cache:
+        return json.loads(_get(f"{_BASE_DATA}/api/xbrl/companyfacts/CIK{c10}.json").text)
+    path = FUNDAMENTALS_DIR / f"CIK{c10}.json"
+    if refresh or not path.exists():
         FUNDAMENTALS_DIR.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(_get(f"{_BASE_DATA}/api/xbrl/companyfacts/CIK{c10}.json").text, cache)
-    return json.loads(cache.read_text(encoding="utf-8"))
+        atomic_write_text(_get(f"{_BASE_DATA}/api/xbrl/companyfacts/CIK{c10}.json").text, path)
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 # --- parsing (network-free, unit-tested) --------------------------------------------
