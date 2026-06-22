@@ -20,8 +20,13 @@ model, data adapters, universe, and execution are all market-specific.
 > ([docs/multifactor_study.md](docs/multifactor_study.md)): the regime filter is crash insurance
 > (−88%→−43% in 2008) but whipsaws in bulls; the ML combiner modestly beats the fixed candidate
 > — **but a passive S&P 500 buy-and-hold beats every long-only variant on CAGR, Sharpe and
-> Calmar.** Honest read: long-only large-cap factors don't beat the index; next is long/short,
-> a broader universe, and better signals. No validated alpha — `live/strategy.py` is a prior.
+> Calmar.** Taken further to a **market-neutral long-short** test
+> ([docs/longshort_study.md](docs/longshort_study.md)), every classic factor's net-of-cost
+> spread is ≈0 or negative (only quality barely positive) and the ML combiner overfits to
+> negative — **no tradeable edge in classic factors on large-cap US after rigor** (the known
+> "factors are arbitraged" result). The durable output is a methodology that tells the truth;
+> the honest frontier is smaller-cap / alternative signals. No validated alpha —
+> `live/strategy.py` is a prior, not a recommendation.
 
 ## Architecture
 
