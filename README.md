@@ -30,7 +30,13 @@ model, data adapters, universe, and execution are all market-specific.
 > (Sharpe −0.34 to −0.38) — the only gross-positive one (reversal) is a 313%/mo turnover
 > illusion. So classic factors have no tradeable edge in US equities, **large OR small cap**.
 > The durable output is a methodology that tells the truth; the honest frontier is non-classic /
-> alternative signals. No validated alpha — `live/strategy.py` is a prior, not a recommendation.
+> alternative signals. First such test — **PEAD** (post-earnings-announcement drift,
+> [docs/pead_study.md](docs/pead_study.md)) — is the first signal with a *pulse*: a positive,
+> near-significant SUE rank IC (t≈0.9) with ~zero market beta, unlike the flat/negative
+> valuation factors — but its long-short still loses after costs in a large-cap monthly form
+> (the drift is front-loaded in the first days and decayed in large caps). Realistic edge would
+> need faster (event-time) execution and/or smaller caps. No validated alpha — `live/strategy.py`
+> is a prior, not a recommendation.
 
 ## Architecture
 
