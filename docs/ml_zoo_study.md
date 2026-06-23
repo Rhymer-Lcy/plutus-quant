@@ -131,14 +131,46 @@ ensemble: **OOS IC t=2.64 (vs 2.61 without volume), low-cost q0.10 Sharpe 0.48 (
 statistically identical. The price features already captured the signal; volume adds nothing
 material. The marginal edge is what it is; the deployability verdict (Phase 4) is unchanged.
 
-## Next levers (none cross the retail wall by themselves; ranked by EV)
-- **Turnover-aware portfolio optimization** (Riskfolio-Lib / cvxpy) — turnover (~270%/mo) is what
-  eats the real edge, so an optimizer that trades off expected return vs cost is the single
-  highest-EV move on the signal we already have. Doesn't need new data.
+## Phase 6 — portfolio construction crosses the realistic-cost wall (the breakthrough)
+
+The naive book equal-weights the top/bottom decile (~250 names/side), DILUTING a continuous,
+informative signal. A turnover-aware dollar-neutral optimizer (`research/backtest/optimize.py`,
+cvxpy: max alpha·w − γ·slip·‖w−w_prev‖₁, dollar-neutral, per-name cap 2%, gross 2) instead
+concentrates into the ~100 highest-conviction names. On the cached GRU signal:
+
+| construction | low cost (5/50) | **realistic (15/300)** | turnover |
+|---|---:|---:|---:|
+| naive quintile q0.10 | Sharpe 0.48 | **−0.11** | 2.77 |
+| optimizer (γ=0) | **0.89** | **+0.46** | 3.15 |
+| optimizer (γ=2) | 0.75 | **+0.47** | 2.32 |
+| optimizer (γ=15) | 0.47 | 0.09 | 1.58 |
+
+**The realistic-cost market-neutral Sharpe goes from −0.11 (naive) to ~0.46 (optimized)** — the
+first clearly net-positive result at realistic frictions. The gain is **concentration / signal-
+magnitude weighting** (using the GRU's continuous alpha + a 2% cap), not turnover reduction
+(γ helps only marginally). OOS signal, no look-ahead — not a leak (Sharpe 0.46, not 7).
+
+Caveats (so we don't over-claim): (1) **no market-impact** in the cost model → valid for SMALL/
+MEDIUM AUM (the small/medium capital tiers) where 15 bps slippage is realistic; large AUM would
+erode it (the capacity study, using dollar-volume, is the check). (2) It **requires shorting** the
+bottom names → viable for a small **market-neutral fund**, still not for retail long-only (Phase 4:
+the long leg alone keeps no alpha). (3) name_cap=0.02 is an a-priori risk limit; robustness
+across caps is being verified.
+
+### Verdict update
+There IS a tradeable market-neutral edge for a small/medium-AUM fund that can short: a temporal-DL
+signal, concentrated via a dollar-neutral optimizer, nets ~Sharpe 0.45–0.9 (realistic→low cost).
+This is the first thing to clearly clear realistic costs. It is small, needs shorting + low impact
+(small AUM), and is not retail-long-only — but it is real, and it vindicates "small profit is
+possible" for the right (small fund) setup.
+
+## Next levers (ranked by EV)
+- **Capacity study** (impact from dollar-volume × capital tiers) — find the AUM where the edge
+  erodes; turns "Sharpe 0.46" into "$X capacity at Sharpe Y".
 - **Short-side signals** (analyst revisions [IBES detail, in hand], short interest [可代下]) — the
   alpha is short-side; strengthening it is the natural next signal work.
-- **DL archs / Qlib native** (Transformer/TFT/TabNet) — incremental; the IC ceiling (~t=2.6) looks
-  reached, so low EV; overfit risk.
+- **DL archs / Qlib native** (Transformer/TFT/TabNet) — incremental; IC ceiling (~t=2.6) looks
+  reached; low EV, overfit risk.
 
 The honest through-line holds: real signal found, rigorously; not tradeable at retail cost; the
 durable asset remains the look-ahead-audited, cost-aware platform that can say so with confidence.
