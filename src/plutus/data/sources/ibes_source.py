@@ -53,13 +53,14 @@ def load_actuals(zip_path: str | Path, periodicity: str = "QTR") -> pd.DataFrame
 
 
 def stream_estimates(zip_path: str | Path, tickers: set | None = None, start=None,
-                     block_size: int = 64 << 20) -> pd.DataFrame:
-    """Stream the 4.65GB estimates CSV, keeping only QUARTERLY EPS estimates (and, if given, only
-    `tickers`), projected to the needed columns. Returns (ticker, cusip, fpedats, anndats,
-    analys, value). Never extracts the full file."""
+                     fpi=None, block_size: int = 64 << 20) -> pd.DataFrame:
+    """Stream the 4.65GB estimates CSV, keeping only the given forecast-period horizons `fpi`
+    (default quarterly {6,7,8,9}; pass {'1'} for FY1 annual — used for revision signals) and, if
+    given, only `tickers`. Returns (ticker, cusip, fpedats, anndats, analys, value). Never
+    extracts the full file."""
     conv = pacsv.ConvertOptions(include_columns=EST_COLS,
                                 column_types={c: pa.string() for c in EST_COLS})
-    fpi_set = pa.array(_QUARTERLY_FPI, type=pa.string())
+    fpi_set = pa.array(list(fpi) if fpi is not None else _QUARTERLY_FPI, type=pa.string())
     want = pa.array(sorted(tickers), type=pa.string()) if tickers else None
     parts: list[pa.Table] = []
     with zipfile.ZipFile(zip_path) as z:
@@ -100,6 +101,33 @@ def consensus_surprise(est_group: pd.DataFrame, actual_value: float, cutoff) -> 
     std = float(np.std(vals, ddof=1)) if len(vals) >= 2 else np.nan
     sue = (actual_value - mean) / std if (std and std > 0) else np.nan
     return mean, std, len(vals), sue
+
+
+def monthly_consensus(estimates: pd.DataFrame, eval_dates, freshness_days: int = 180):
+    """Monthly FY1 consensus EPS per ticker (for revision signals). At each eval date: the latest
+    estimate per analyst for the NEAREST upcoming annual period (fpedats >= date), announced within
+    `freshness_days`. Returns (consensus_mean, dispersion_std, fy1_end) date x ticker panels;
+    `fy1_end` is the FY1 period-end so a caller can mask fiscal-year ROLLOVERS when differencing
+    into revisions. `estimates` should be FY1 (stream_estimates(..., fpi={'1'})).
+
+    No look-ahead: only estimates announced on/before each date enter that date's consensus."""
+    e = estimates.dropna(subset=["ticker", "fpedats", "anndats", "value"]).sort_values("anndats")
+    fresh = pd.Timedelta(days=freshness_days)
+    cons, disp, fpe = {}, {}, {}
+    for t in eval_dates:
+        t = pd.Timestamp(t)
+        sub = e[(e["anndats"] <= t) & (e["anndats"] >= t - fresh) & (e["fpedats"] >= t)]
+        if sub.empty:
+            continue
+        sub = sub[sub["fpedats"] == sub.groupby("ticker")["fpedats"].transform("min")]  # nearest FY1
+        sub = sub.drop_duplicates(["ticker", "analys"], keep="last")    # latest estimate per analyst
+        g = sub.groupby("ticker")
+        cons[t] = g["value"].mean()
+        disp[t] = g["value"].std()
+        fpe[t] = g["fpedats"].first()
+    idx = pd.DatetimeIndex(eval_dates)
+    return (pd.DataFrame(cons).T.reindex(idx), pd.DataFrame(disp).T.reindex(idx),
+            pd.DataFrame(fpe).T.reindex(idx))
 
 
 def build_surprise_events(actuals: pd.DataFrame, estimates: pd.DataFrame) -> pd.DataFrame:
