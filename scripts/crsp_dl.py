@@ -85,7 +85,7 @@ def _train(model, Xtr, ytr, device, epochs=15, batch=2048, lr=1e-3):
 
 
 def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refresh: int = 12,
-        hidden: int = 64, epochs: int = 15) -> dict:
+        hidden: int = 64, epochs: int = 15, ensemble: int = 1) -> dict:
     ensure_dirs()
     torch.manual_seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -106,22 +106,27 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
     print(f"sequences: {len(X):,} (seq_len {seq_len}, {len(cols)} features); GRU walk-forward…")
 
     preds: dict = {}
-    model = None
+    models: list = []
     for t in range(min_train, len(edates) - 1):
         if (t - min_train) % refresh == 0:            # periodic retrain on all history < t
             tr = di < t
             if tr.sum() < 5000:
                 continue
-            model = GRUNet(len(cols), hidden=hidden).to(device)
-            _train(model, X[tr], y[tr], device, epochs=epochs)
-        if model is None:
+            models = []                                # ENSEMBLE: K seeds, averaged (DL is noisy)
+            for s in range(ensemble):
+                torch.manual_seed(s)
+                m = GRUNet(len(cols), hidden=hidden).to(device)
+                _train(m, X[tr], y[tr], device, epochs=epochs)
+                m.eval()
+                models.append(m)
+        if not models:
             continue
         te = di == t
         if not te.any():
             continue
-        model.eval()
+        Xte = torch.from_numpy(X[te]).to(device)
         with torch.no_grad():
-            p = model(torch.from_numpy(X[te]).to(device)).cpu().numpy()
+            p = np.mean([mdl(Xte).cpu().numpy() for mdl in models], axis=0)
         preds[edates[t]] = pd.Series(p, index=tk[te])
     signal = pd.DataFrame(preds).T.sort_index()
     signal.index = pd.to_datetime(signal.index)
@@ -158,8 +163,10 @@ def main() -> int:
     ap.add_argument("--seq", type=int, default=12)
     ap.add_argument("--hidden", type=int, default=64)
     ap.add_argument("--epochs", type=int, default=15)
+    ap.add_argument("--ensemble", type=int, default=1)
     args = ap.parse_args()
-    run(universe=args.universe, seq_len=args.seq, hidden=args.hidden, epochs=args.epochs)
+    run(universe=args.universe, seq_len=args.seq, hidden=args.hidden, epochs=args.epochs,
+        ensemble=args.ensemble)
     return 0
 
 
