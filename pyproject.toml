@@ -24,7 +24,11 @@ dependencies = [
     "requests",      # SEC EDGAR + Stooq CSV
     "yfinance",      # free daily price backbone
     "openpyxl",      # read CRSP S&P 500 constituents .xlsx (data/sources/crsp_source)
+    "cvxpy",         # turnover-aware portfolio optimization (research/backtest/optimize)
 ]
+# NOTE: deep-learning scripts (scripts/crsp_dl*.py) also need `torch` (install the CUDA build
+# separately, e.g. pip install torch --index-url https://download.pytorch.org/whl/cu128); it is
+# a script-only dependency, not imported by the importable package, so it's kept out of core deps.
 
 [project.optional-dependencies]
 dev = ["pytest"]
