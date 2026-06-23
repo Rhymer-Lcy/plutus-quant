@@ -42,25 +42,31 @@ def _load(universe: str):
     return adj, cap, members_asof
 
 
-def run(model: str = "lightgbm", universe: str = "smallcap") -> dict:
+def run(model: str = "lightgbm", universe: str = "smallcap", rebuild: bool = False) -> dict:
     ensure_dirs()
     adj, cap, members_asof = _load(universe)
     dates = adj.index
     eval_dates = _month_ends(dates)
     print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} monthly eval dates")
 
-    feats = af.build_features(adj, cap)
-    print(f"features: {len(feats)} ({', '.join(list(feats)[:8])}, …)")
-    data, cols = build_dataset(feats, adj, eval_dates, members_asof)
-    print(f"dataset: {len(data):,} samples x {len(cols)} features; walk-forward {model}…")
-
-    if model == "lightgbm":
-        signal = walk_forward_predict(data, cols, min_train=24, window=36)
+    sig_path = BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}_signal.parquet"
+    if sig_path.exists() and not rebuild:
+        signal = pd.read_parquet(sig_path)
+        print(f"loaded cached OOS signal: {signal.shape[0]} months x {signal.shape[1]} names")
     else:
-        raise ValueError(f"model {model} not wired yet (phase 2)")
-    print(f"OOS signal: {signal.shape[0]} months x {signal.shape[1]} names "
-          f"(from {signal.index.min().date()})")
+        feats = af.build_features(adj, cap)
+        print(f"features: {len(feats)} ({', '.join(list(feats)[:8])}, …)")
+        data, cols = build_dataset(feats, adj, eval_dates, members_asof)
+        print(f"dataset: {len(data):,} samples x {len(cols)} features; walk-forward {model}…")
+        if model == "lightgbm":
+            signal = walk_forward_predict(data, cols, min_train=24, window=36)
+        else:
+            raise ValueError(f"model {model} not wired yet (phase 2)")
+        signal.to_parquet(sig_path)              # cache BEFORE eval (don't lose the slow fit)
+        print(f"OOS signal: {signal.shape[0]} months x {signal.shape[1]} names "
+              f"(from {signal.index.min().date()})")
 
+    signal = signal.reindex(eval_dates)          # align to the full grid (early months -> NaN, skipped)
     ic = compute_ic(signal, adj, eval_dates, members_asof)
     print(f"\nOOS signal rank IC: mean {ic.mean_ic:.4f}  IC-IR {ic.ic_ir:.3f}  "
           f"t {ic.t_stat:.2f}  hit {ic.hit_rate:.2f}  n {ic.n_periods}")
@@ -76,9 +82,8 @@ def run(model: str = "lightgbm", universe: str = "smallcap") -> dict:
         print(f"{label:>16s} {r.ann_return:8.2%} {r.sharpe:7.2f} {r.max_drawdown:8.2%} "
               f"{r.market_beta:6.2f} {r.avg_turnover:6.2f}")
     atomic_to_parquet(pd.DataFrame(rows), BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}.parquet")
-    signal.to_parquet(BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}_signal.parquet")
-    print(f"\n[OK] {model} on {len(feats)} rich features, {universe}, survivorship-free, "
-          "net of costs. See docs/ml_zoo_study.md.")
+    print(f"\n[OK] {model} on the rich feature set, {universe}, survivorship-free, net of costs. "
+          "See docs/ml_zoo_study.md.")
     return {"ic": ic, "rows": pd.DataFrame(rows)}
 
 
@@ -86,8 +91,9 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", default="lightgbm")
     ap.add_argument("--universe", default="smallcap", choices=["smallcap", "largecap"])
+    ap.add_argument("--rebuild", action="store_true")
     args = ap.parse_args()
-    run(model=args.model, universe=args.universe)
+    run(model=args.model, universe=args.universe, rebuild=args.rebuild)
     return 0
 
 
