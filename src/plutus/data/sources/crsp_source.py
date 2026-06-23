@@ -118,11 +118,11 @@ def stream_universe(zip_path: str | Path, start, end, price_min: float = 5.0,
     that can't really be traded/borrowed). Price/cap are read as floats for the filter; the
     rest as strings. Returns a tidy long DataFrame."""
     str_cols = ["PERMNO", "DlyCalDt", "Ticker", "DlyRet", "SecurityType", "SecuritySubType", "PrimaryExch"]
-    cols = str_cols + ["DlyClose", "DlyCap"]
+    float_cols = ["DlyClose", "DlyCap", "DlyVol", "DlyPrcVol"]   # incl. share volume + dollar volume
+    cols = str_cols + float_cols
     conv = pacsv.ConvertOptions(
         include_columns=cols,
-        column_types={**{c: pa.string() for c in str_cols},
-                      "DlyClose": pa.float64(), "DlyCap": pa.float64()})
+        column_types={**{c: pa.string() for c in str_cols}, **{c: pa.float64() for c in float_cols}})
     exch = pa.array(["N", "A", "Q"], type=pa.string())
     parts: list[pa.Table] = []
     with zipfile.ZipFile(zip_path) as z:

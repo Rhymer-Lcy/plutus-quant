@@ -28,14 +28,25 @@ def build(start: str, end: str, price_min: float, cap_min_000: float) -> None:
     print(f"kept {len(long):,} daily rows for {long['PERMNO'].nunique()} common stocks "
           f"({long['date'].min().date()} -> {long['date'].max().date()})")
 
+    import pandas as pd
     adj = crsp.build_tr_adjusted_close(long)
     cap = crsp.build_mktcap(long)
     tmap = crsp.latest_ticker_map(long)
+
+    def _pivot(col):                                  # date x PERMNO panel of a raw column
+        d = long.dropna(subset=[col])[["PERMNO", "date", col]].drop_duplicates(["PERMNO", "date"])
+        p = d.pivot(index="date", columns="PERMNO", values=col).sort_index()
+        p.columns = p.columns.astype(str)
+        return p
+    vol = _pivot("DlyVol")            # share volume
+    dvol = _pivot("DlyPrcVol")        # dollar volume (for liquidity / Amihud)
+
     adj.columns = adj.columns.astype(str)
     cap.columns = cap.columns.astype(str)
     atomic_to_parquet(adj, PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     atomic_to_parquet(cap, PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-    import pandas as pd
+    atomic_to_parquet(vol, PARQUET_DIR / "crsp_smallcap_volume.parquet")
+    atomic_to_parquet(dvol, PARQUET_DIR / "crsp_smallcap_dollarvol.parquet")
     atomic_to_parquet(pd.DataFrame({"permno": list(tmap), "ticker": list(tmap.values())}),
                       PARQUET_DIR / "crsp_smallcap_ticker_map.parquet")
     print(f"\nlake written: {adj.shape[0]} dates x {adj.shape[1]} common stocks")

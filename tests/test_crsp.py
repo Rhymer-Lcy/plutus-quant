@@ -84,13 +84,13 @@ def test_size_band_members_asof():
 
 def test_stream_universe_filters_common_major_priced(tmp_path):
     csv = (
-        "PERMNO,DlyCalDt,Ticker,DlyRet,SecurityType,SecuritySubType,PrimaryExch,DlyClose,DlyCap\n"
-        "10,2020-01-02,KEEP1,0.01,EQTY,COM,N,50.0,200000\n"   # keep: common, NYSE, $50, $200M
-        "20,2020-01-02,LOWPX,0.01,EQTY,COM,Q,3.0,200000\n"    # drop: price < $5
-        "30,2020-01-02,MICRO,0.01,EQTY,COM,Q,50.0,50000\n"    # drop: cap < $100M
-        "40,2020-01-02,PREF,0.01,EQTY,PFD,N,50.0,200000\n"    # drop: not common (preferred)
-        "50,2020-01-02,OTC,0.01,EQTY,COM,P,50.0,200000\n"     # drop: not a major exchange
-        "60,2020-01-02,KEEP2,0.01,EQTY,COM,A,10.0,150000\n"   # keep: common, AMEX, $10, $150M
+        "PERMNO,DlyCalDt,Ticker,DlyRet,SecurityType,SecuritySubType,PrimaryExch,DlyClose,DlyCap,DlyVol,DlyPrcVol\n"
+        "10,2020-01-02,KEEP1,0.01,EQTY,COM,N,50.0,200000,1000,50000\n"   # keep: common, NYSE, $50, $200M
+        "20,2020-01-02,LOWPX,0.01,EQTY,COM,Q,3.0,200000,1000,3000\n"     # drop: price < $5
+        "30,2020-01-02,MICRO,0.01,EQTY,COM,Q,50.0,50000,1000,50000\n"    # drop: cap < $100M
+        "40,2020-01-02,PREF,0.01,EQTY,PFD,N,50.0,200000,1000,50000\n"    # drop: not common (preferred)
+        "50,2020-01-02,OTC,0.01,EQTY,COM,P,50.0,200000,1000,50000\n"     # drop: not a major exchange
+        "60,2020-01-02,KEEP2,0.01,EQTY,COM,A,10.0,150000,2000,20000\n"   # keep: common, AMEX, $10, $150M
     )
     zp = tmp_path / "u.csv.zip"
     with zipfile.ZipFile(zp, "w", zipfile.ZIP_DEFLATED) as z:
@@ -98,6 +98,7 @@ def test_stream_universe_filters_common_major_priced(tmp_path):
     out = crsp.stream_universe(zp, "2020-01-01", "2020-12-31", price_min=5.0, cap_min_000=100000.0)
     assert set(out["PERMNO"]) == {10, 60}
     assert "SecurityType" not in out.columns           # filter cols dropped
+    assert {"DlyVol", "DlyPrcVol"}.issubset(out.columns)   # volume cols kept
 
 
 def test_stream_filtered_from_zip(tmp_path):

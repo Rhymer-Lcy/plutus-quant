@@ -22,9 +22,11 @@ _RANGE_WINDOWS = (5, 10, 20, 60)
 _DIST_WINDOWS = (20, 60)
 
 
-def build_features(close: pd.DataFrame, mktcap: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
-    """Build the feature dict from a (date x ticker) adjusted-close panel (+ optional mktcap).
-    All features use only past data as of each row."""
+def build_features(close: pd.DataFrame, mktcap: pd.DataFrame | None = None,
+                   volume: pd.DataFrame | None = None,
+                   dollar_vol: pd.DataFrame | None = None) -> dict[str, pd.DataFrame]:
+    """Build the feature dict from a (date x ticker) adjusted-close panel (+ optional mktcap,
+    share volume, dollar volume). All features use only past data as of each row."""
     feats: dict[str, pd.DataFrame] = {}
     rets = close.pct_change(fill_method=None)
 
@@ -59,5 +61,17 @@ def build_features(close: pd.DataFrame, mktcap: pd.DataFrame | None = None) -> d
 
     if mktcap is not None:
         feats["size"] = np.log(mktcap.where(mktcap > 0))     # log market cap (size factor)
+
+    if volume is not None:                              # volume dynamics (price-volume family)
+        feats["vchg5"] = volume / volume.rolling(5).mean() - 1.0      # volume spike vs 5d
+        feats["vchg20"] = volume / volume.rolling(20).mean() - 1.0
+        feats["vtrend"] = volume.rolling(5).mean() / volume.rolling(60).mean() - 1.0   # vol momentum
+        feats["vstd20"] = volume.pct_change(fill_method=None).rolling(20).std()
+
+    if dollar_vol is not None:                          # liquidity (size-of-trade / Amihud illiquidity)
+        feats["dvol"] = np.log(dollar_vol.where(dollar_vol > 0))      # log dollar volume
+        illiq = rets.abs() / dollar_vol.where(dollar_vol > 0)
+        feats["amihud20"] = illiq.rolling(20).mean()                 # Amihud illiquidity
+        feats["amihud60"] = illiq.rolling(60).mean()
 
     return feats

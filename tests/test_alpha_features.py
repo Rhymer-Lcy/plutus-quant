@@ -32,6 +32,20 @@ def test_roc_and_size_values():
     pd.testing.assert_frame_equal(feats["size"], np.log(close * 1000.0))
 
 
+def test_volume_features_present_and_no_lookahead():
+    close = _panel()
+    rng = np.random.default_rng(1)
+    vol = pd.DataFrame(rng.uniform(1e5, 1e7, close.shape), index=close.index, columns=close.columns)
+    feats = build_features(close, mktcap=close * 1e3, volume=vol, dollar_vol=vol * close)
+    for k in ("vchg5", "vtrend", "vstd20", "dvol", "amihud20", "amihud60"):
+        assert k in feats and feats[k].shape == close.shape
+    # no-look-ahead for a volume feature: row 80 unchanged when the future is perturbed
+    before = feats["amihud20"].iloc[80].copy()
+    vol2 = vol.copy(); vol2.iloc[100:] *= 3.0
+    feats2 = build_features(close, mktcap=close * 1e3, volume=vol2, dollar_vol=vol2 * close)
+    pd.testing.assert_series_equal(feats2["amihud20"].iloc[80], before, check_names=False)
+
+
 def test_no_lookahead():
     close = _panel()
     feats = build_features(close)

@@ -39,11 +39,11 @@ class GRUNet(nn.Module):
         return self.head(out[:, -1, :]).squeeze(-1)
 
 
-def _build_sequences(adj, cap, members_asof, eval_dates, seq_len):
+def _build_sequences(adj, cap, members_asof, eval_dates, seq_len, volume=None, dollar_vol=None):
     """Return X [n, seq_len, F], y [n] (xs-demeaned fwd ret), di [n] (date idx), tk [n] (ticker),
     and feature names. Standardized features over the PIT universe; sequences are seq_len
     consecutive monthly feature vectors with no gaps; target is the next-month return."""
-    raw = af.build_features(adj, cap)
+    raw = af.build_features(adj, cap, volume=volume, dollar_vol=dollar_vol)
     cols = list(raw)
     aligned = {k: fl.restrict_to_universe(v.reindex(index=eval_dates, columns=adj.columns), members_asof)
                for k, v in raw.items()}
@@ -89,10 +89,16 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
     ensure_dirs()
     torch.manual_seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    vol = dvol = None
     if universe == "smallcap":
         adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
         members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+        vp = PARQUET_DIR / "crsp_smallcap_volume.parquet"
+        dp = PARQUET_DIR / "crsp_smallcap_dollarvol.parquet"
+        if vp.exists() and dp.exists():               # volume/liquidity features (if lake has them)
+            vol = pd.read_parquet(vp).reindex(columns=adj.columns)
+            dvol = pd.read_parquet(dp).reindex(columns=adj.columns)
     else:
         adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
@@ -100,9 +106,11 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         _m = crsp.members_asof_from_spells(spells)
         members_asof = lambda d: {str(p) for p in _m(d)}
     eval_dates = _month_ends(adj.index)
-    print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} months, device={device}")
+    print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} months, device={device}, "
+          f"volume={'yes' if vol is not None else 'no'}")
 
-    X, y, di, tk, cols, edates = _build_sequences(adj, cap, members_asof, eval_dates, seq_len)
+    X, y, di, tk, cols, edates = _build_sequences(adj, cap, members_asof, eval_dates, seq_len,
+                                                  volume=vol, dollar_vol=dvol)
     print(f"sequences: {len(X):,} (seq_len {seq_len}, {len(cols)} features); GRU walk-forward…")
 
     preds: dict = {}
