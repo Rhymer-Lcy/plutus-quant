@@ -86,3 +86,18 @@ the close tends to be a better entry than the open; for one you must sell, the o
 implementation shortfall on an existing book; it does not, on its own, pay. Consistent with the rest
 of the program: a real anomaly, owned by whoever already provides the liquidity and is trading at the
 auctions regardless — not by a retail trader crossing the spread to chase it.
+
+## Audit (adversarial, self-run)
+
+- **DlyOpen data quality (the surface that could invalidate the decomposition).** CRSP DlyOpen is a
+  real opening price, not a stale fallback: open is missing for only 0.01% of close cells, exactly
+  equals the same-day close 0.91% of the time, and produces a sane intraday distribution (|intraday|
+  > 35% on just 0.006% of cells). Dropping those suspicious opens leaves the split unchanged
+  (overnight +8.44% / intraday +2.06% vs +8.37% / +2.15%). 4.16% of opens equal the *prior* close
+  (a possible prev-close fallback) — that biases overnight *down*, so the +8.4% is if anything
+  conservative.
+- **Risk-adjusted domination.** Buy-and-hold of the same liquid subset beats the overnight-only-net
+  book on *both* return and Sharpe (B&H +14.7%/yr, Sharpe 0.80 vs overnight-only +2.8%/yr,
+  Sharpe 0.31), despite the latter's lower volatility — so "not a reason to trade" holds even on a
+  vol-adjusted basis, not just on raw return.
+

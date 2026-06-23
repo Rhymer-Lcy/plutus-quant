@@ -73,3 +73,13 @@ spread to chase it. At retail you are on the wrong side of the bounce and you pa
 Short-term reversal joins the list of US-equity families with no retail-tradeable edge after rigor
 (classic factors large+small, PEAD incl. IBES, ML/GRU cross-sectional, pairs stat-arb). It is real —
 and it is owned by whoever provides the liquidity, which is not us.
+
+## Audit (adversarial, self-run)
+
+The skip variant's `.shift(1)` uses only past data (no look-ahead — it is strictly more
+conservative), and the engine drops names untradable at t or t+1 and outside PIT membership. The
+gross premium is **not** merely compensated market beta: beta-stripping the gross long-short
+(residual after regressing on the cap-weighted market) leaves the Sharpe essentially unchanged —
+large-cap 0.59 → 0.63, small-cap 1.01 → 0.98 — so it is genuine cross-sectional alpha, which only
+sharpens the conclusion that what kills it is the turnover cost wall, not a beta mirage.
+
