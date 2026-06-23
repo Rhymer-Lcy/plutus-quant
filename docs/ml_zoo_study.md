@@ -188,6 +188,23 @@ ceiling ≈ $10M.** This is precisely a *retail/small-player* edge — it surviv
 too small for big money to arbitrage. (impact_coef is an assumption; the curve's SHAPE — positive
 small, negative large — is the robust result; the exact ceiling moves with the impact calibration.)
 
+## Phase 8 — analyst-revision features strengthen the edge (#4)
+
+Analyst earnings-estimate revisions are orthogonal to price (analyst behavior, not returns). The
+revision/dispersion signals have significant standalone IC (rev_1m t=2.94, rev_3m t=2.21,
+dispersion t=2.90) but their equal-weight quintile long-short is unprofitable (the edge isn't in
+the tails) — so they were fed to the GRU as FEATURES (44 total), not traded standalone:
+
+| GRU features | OOS IC t | naive q0.10 realistic | naive q0.10 low cost |
+|---|---:|---:|---:|
+| price only (34) | 2.61 | −0.08 | 0.47 |
+| + volume (41) | 2.64 | −0.11 | 0.48 |
+| **+ revisions (44)** | **2.98** | **+0.02** | **0.60** |
+
+Revisions lifted the IC (t 2.64 → 2.98) and the naive realistic-cost Sharpe from negative to
+break-even-positive — a genuine, orthogonal improvement (optimizer + capacity on this stronger
+signal re-running; expect the realistic-cost optimized Sharpe and the capacity ceiling to rise).
+
 ## FINAL VERDICT of the quant program
 "Is small profit possible?" — **Yes, for a small (≤ ~$5M) market-neutral book that can short.** A
 temporal-DL signal on rich features, concentrated via a dollar-neutral optimizer, nets ~Sharpe
