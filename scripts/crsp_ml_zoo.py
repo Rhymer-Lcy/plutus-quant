@@ -23,9 +23,46 @@ from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import alpha_features as af
-from plutus.research.model.walk_forward import build_dataset, walk_forward_predict
+from plutus.research.model.walk_forward import DEFAULT_PARAMS, build_dataset
 
 from crsp_study import _month_ends
+
+
+def _make_model(model: str):
+    """Model factory (sklearn-like regressors). Tree models handle NaN/scale natively."""
+    if model == "lightgbm":
+        from lightgbm import LGBMRegressor
+        return LGBMRegressor(**DEFAULT_PARAMS)
+    if model == "xgboost":
+        from xgboost import XGBRegressor
+        return XGBRegressor(n_estimators=300, max_depth=4, learning_rate=0.03, subsample=0.8,
+                            colsample_bytree=0.8, reg_lambda=1.0, n_jobs=-1, verbosity=0)
+    if model == "catboost":
+        from catboost import CatBoostRegressor
+        return CatBoostRegressor(iterations=400, depth=5, learning_rate=0.03, l2_leaf_reg=3.0,
+                                 verbose=0, thread_count=-1, allow_writing_files=False)
+    raise ValueError(f"unknown model {model}")
+
+
+def _walk_forward(data: pd.DataFrame, cols: list, model: str, min_train: int = 24,
+                  window: int = 36) -> pd.DataFrame:
+    """Generic rolling walk-forward -> OOS signal panel (date x ticker), for any sklearn-like
+    model. Mirrors research.model.walk_forward but model-agnostic."""
+    udates = sorted(data["date"].unique())
+    preds = {}
+    for idx, t in enumerate(udates):
+        if idx < min_train:
+            continue
+        tr = data[data["date"].isin(udates[max(0, idx - window):idx])]
+        te = data[data["date"] == t]
+        if len(tr) < 200 or te.empty:
+            continue
+        m = _make_model(model)
+        m.fit(tr[cols], tr["fwd_ret"])
+        preds[t] = pd.Series(m.predict(te[cols]), index=te["ticker"].to_numpy())
+    signal = pd.DataFrame(preds).T
+    signal.index = pd.to_datetime(signal.index)
+    return signal.sort_index()
 
 
 def _load(universe: str):
@@ -58,10 +95,7 @@ def run(model: str = "lightgbm", universe: str = "smallcap", rebuild: bool = Fal
         print(f"features: {len(feats)} ({', '.join(list(feats)[:8])}, …)")
         data, cols = build_dataset(feats, adj, eval_dates, members_asof)
         print(f"dataset: {len(data):,} samples x {len(cols)} features; walk-forward {model}…")
-        if model == "lightgbm":
-            signal = walk_forward_predict(data, cols, min_train=24, window=36)
-        else:
-            raise ValueError(f"model {model} not wired yet (phase 2)")
+        signal = _walk_forward(data, cols, model, min_train=24, window=36)
         signal.to_parquet(sig_path)              # cache BEFORE eval (don't lose the slow fit)
         print(f"OOS signal: {signal.shape[0]} months x {signal.shape[1]} names "
               f"(from {signal.index.min().date()})")
