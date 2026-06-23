@@ -39,11 +39,16 @@ class GRUNet(nn.Module):
         return self.head(out[:, -1, :]).squeeze(-1)
 
 
-def _build_sequences(adj, cap, members_asof, eval_dates, seq_len, volume=None, dollar_vol=None):
+def _build_sequences(adj, cap, members_asof, eval_dates, seq_len, volume=None, dollar_vol=None,
+                     extra=None):
     """Return X [n, seq_len, F], y [n] (xs-demeaned fwd ret), di [n] (date idx), tk [n] (ticker),
     and feature names. Standardized features over the PIT universe; sequences are seq_len
-    consecutive monthly feature vectors with no gaps; target is the next-month return."""
+    consecutive monthly feature vectors with no gaps; target is the next-month return.
+    `extra`: optional {name -> monthly date×ticker panel} of additional features (e.g. analyst
+    revisions) merged into the price/volume set."""
     raw = af.build_features(adj, cap, volume=volume, dollar_vol=dollar_vol)
+    if extra:
+        raw.update(extra)
     cols = list(raw)
     aligned = {k: fl.restrict_to_universe(v.reindex(index=eval_dates, columns=adj.columns), members_asof)
                for k, v in raw.items()}
@@ -90,6 +95,7 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
     torch.manual_seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     vol = dvol = None
+    extra: dict = {}
     if universe == "smallcap":
         adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
@@ -99,6 +105,10 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         if vp.exists() and dp.exists():               # volume/liquidity features (if lake has them)
             vol = pd.read_parquet(vp).reindex(columns=adj.columns)
             dvol = pd.read_parquet(dp).reindex(columns=adj.columns)
+        for nm in ("rev1", "rev3", "disp"):           # analyst-revision features (if cached)
+            rp = PARQUET_DIR / f"crsp_smallcap_{nm}.parquet"
+            if rp.exists():
+                extra[nm] = pd.read_parquet(rp).reindex(columns=adj.columns).fillna(0.0)
     else:
         adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
@@ -107,10 +117,10 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         members_asof = lambda d: {str(p) for p in _m(d)}
     eval_dates = _month_ends(adj.index)
     print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} months, device={device}, "
-          f"volume={'yes' if vol is not None else 'no'}")
+          f"volume={'yes' if vol is not None else 'no'}, extra={sorted(extra)}")
 
     X, y, di, tk, cols, edates = _build_sequences(adj, cap, members_asof, eval_dates, seq_len,
-                                                  volume=vol, dollar_vol=dvol)
+                                                  volume=vol, dollar_vol=dvol, extra=extra or None)
     print(f"sequences: {len(X):,} (seq_len {seq_len}, {len(cols)} features); GRU walk-forward…")
 
     preds: dict = {}

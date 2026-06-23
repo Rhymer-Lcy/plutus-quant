@@ -71,7 +71,9 @@ def run() -> dict:
         return r.where(~rolled)
     rev1, rev3 = revision(1), revision(3)
     dispersion = -(disp / cons.abs())           # higher dispersion = more uncertain -> negative
-    atomic_to_parquet(rev3.reset_index(), BACKTESTS_DIR / "crsp_revision_panel.parquet")
+    # cache all three panels (for GRU feature integration)
+    for nm, pnl in [("rev1", rev1), ("rev3", rev3), ("disp", dispersion)]:
+        atomic_to_parquet(pnl, PARQUET_DIR / f"crsp_smallcap_{nm}.parquet")
 
     print(f"\nstandalone rank IC vs next-month return (mid/small band):")
     sigs = {"rev_1m": rev1, "rev_3m": rev3, "dispersion": dispersion}
