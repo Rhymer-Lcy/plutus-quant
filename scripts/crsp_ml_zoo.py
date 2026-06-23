@@ -1,0 +1,95 @@
+"""ML model zoo on the rich feature set — does a larger feature space + stronger models find a
+small cost-clearing monthly edge the 6 classic factors couldn't?
+
+Phase 1: rich Alpha158-style features (research.factors.alpha_features) -> walk-forward model
+-> OOS monthly signal -> rigorous evaluation (rank IC + market-neutral quintile long-short, net
+of costs, low AND realistic). All survivorship-free CRSP; monthly cross-section. Models added
+incrementally (lightgbm now; xgboost/catboost/torch next). Compare OOS IC to the (~0) 6-factor
+baseline — if the rich features lift it, escalate to DL on the GPU.
+
+    conda activate plutus
+    python scripts/build_crsp_smallcap_lake.py    # once (universe + prices)
+    python scripts/crsp_ml_zoo.py --model lightgbm --universe smallcap
+"""
+from __future__ import annotations
+
+import argparse
+
+import pandas as pd
+
+from plutus.data.sources import crsp_source as crsp
+from plutus.io import atomic_to_parquet
+from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
+from plutus.research.backtest.long_short import quantile_long_short
+from plutus.research.eval.factor_eval import compute_ic
+from plutus.research.factors import alpha_features as af
+from plutus.research.model.walk_forward import build_dataset, walk_forward_predict
+
+from crsp_study import _month_ends
+
+
+def _load(universe: str):
+    if universe == "smallcap":
+        adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
+        cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
+        members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    else:  # large-cap S&P 500
+        adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
+        cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
+        spells = pd.read_parquet(PARQUET_DIR / "crsp_members.parquet")
+        _m = crsp.members_asof_from_spells(spells)
+        members_asof = lambda d: {str(p) for p in _m(d)}
+    return adj, cap, members_asof
+
+
+def run(model: str = "lightgbm", universe: str = "smallcap") -> dict:
+    ensure_dirs()
+    adj, cap, members_asof = _load(universe)
+    dates = adj.index
+    eval_dates = _month_ends(dates)
+    print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} monthly eval dates")
+
+    feats = af.build_features(adj, cap)
+    print(f"features: {len(feats)} ({', '.join(list(feats)[:8])}, …)")
+    data, cols = build_dataset(feats, adj, eval_dates, members_asof)
+    print(f"dataset: {len(data):,} samples x {len(cols)} features; walk-forward {model}…")
+
+    if model == "lightgbm":
+        signal = walk_forward_predict(data, cols, min_train=24, window=36)
+    else:
+        raise ValueError(f"model {model} not wired yet (phase 2)")
+    print(f"OOS signal: {signal.shape[0]} months x {signal.shape[1]} names "
+          f"(from {signal.index.min().date()})")
+
+    ic = compute_ic(signal, adj, eval_dates, members_asof)
+    print(f"\nOOS signal rank IC: mean {ic.mean_ic:.4f}  IC-IR {ic.ic_ir:.3f}  "
+          f"t {ic.t_stat:.2f}  hit {ic.hit_rate:.2f}  n {ic.n_periods}")
+
+    print(f"\nquintile long-short (monthly, market-neutral), net of costs:")
+    print(f"{'costs':>16s} {'annRet':>8s} {'Sharpe':>7s} {'maxDD':>8s} {'beta':>6s} {'turn':>6s}")
+    rows = []
+    for label, slp, brw in [("low 5/50", 5.0, 50.0), ("realistic 15/300", 15.0, 300.0)]:
+        r = quantile_long_short(adj, signal, eval_dates, members_asof, quantile=0.2,
+                                slippage_bps=slp, borrow_bps_annual=brw, market_index=None)
+        rows.append({"costs": label, "ann_return": r.ann_return, "sharpe": r.sharpe,
+                     "max_dd": r.max_drawdown, "turnover": r.avg_turnover})
+        print(f"{label:>16s} {r.ann_return:8.2%} {r.sharpe:7.2f} {r.max_drawdown:8.2%} "
+              f"{r.market_beta:6.2f} {r.avg_turnover:6.2f}")
+    atomic_to_parquet(pd.DataFrame(rows), BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}.parquet")
+    signal.to_parquet(BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}_signal.parquet")
+    print(f"\n[OK] {model} on {len(feats)} rich features, {universe}, survivorship-free, "
+          "net of costs. See docs/ml_zoo_study.md.")
+    return {"ic": ic, "rows": pd.DataFrame(rows)}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--model", default="lightgbm")
+    ap.add_argument("--universe", default="smallcap", choices=["smallcap", "largecap"])
+    args = ap.parse_args()
+    run(model=args.model, universe=args.universe)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
