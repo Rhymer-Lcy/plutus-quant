@@ -123,13 +123,22 @@ where execution costs are highest. Classic tension: the edge is where it's harde
 - So "small profit possible?" — **yes for a low-cost market-neutral book, no for retail long-only.**
   The edge is real (IC t=2.6) but structurally sits just past where retail frictions can reach it.
 
-## Next levers to push the edge further above the line
-- **Cost-sensitivity curve** + **liquidity-tiered universe** (run on the more-liquid mid-caps
-  where realistic cost ≈ low cost) — find the tier where it's clearly net-positive.
-- **Long-only top-decile** (no borrow — borrow is most of the retail cost; can't short small-caps
-  anyway) — the realistic retail deployment.
-- **Volume/liquidity features** (lake rebuild for CRSP `DlyVol`), bigger ensemble, attention/
-  Transformer — carefully, avoiding overfit-by-backtest.
+## Phase 5 — volume/liquidity features: no improvement (last data lever, null)
+
+Rebuilt the lake with CRSP `DlyVol`/`DlyPrcVol` and added the price-volume family (volume
+spike/momentum/vol, log dollar volume, Amihud illiquidity) → 41 features, re-ran the 5-seed GRU
+ensemble: **OOS IC t=2.64 (vs 2.61 without volume), low-cost q0.10 Sharpe 0.48 (vs 0.47)** —
+statistically identical. The price features already captured the signal; volume adds nothing
+material. The marginal edge is what it is; the deployability verdict (Phase 4) is unchanged.
+
+## Next levers (none cross the retail wall by themselves; ranked by EV)
+- **Turnover-aware portfolio optimization** (Riskfolio-Lib / cvxpy) — turnover (~270%/mo) is what
+  eats the real edge, so an optimizer that trades off expected return vs cost is the single
+  highest-EV move on the signal we already have. Doesn't need new data.
+- **Short-side signals** (analyst revisions [IBES detail, in hand], short interest [可代下]) — the
+  alpha is short-side; strengthening it is the natural next signal work.
+- **DL archs / Qlib native** (Transformer/TFT/TabNet) — incremental; the IC ceiling (~t=2.6) looks
+  reached, so low EV; overfit risk.
 
 The honest through-line holds: real signal found, rigorously; not tradeable at retail cost; the
 durable asset remains the look-ahead-audited, cost-aware platform that can say so with confidence.
