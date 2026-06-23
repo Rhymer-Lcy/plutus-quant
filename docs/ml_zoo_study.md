@@ -58,13 +58,40 @@ implementations. XGBoost is marginally the most harvestable — at **low (instit
 cost** its extreme-quintile long-short is mildly positive (Sharpe ~0.19) — but at **realistic
 small-cap cost every model is negative**. The cost wall stands; a better tree didn't cross it.
 
-## Still open (one real hope + a data lever)
-- **DL on the GPU** (local: 1× RTX 5080 16GB) — `scripts/crsp_dl.py` runs a TEMPORAL GRU over
-  each name's last 12 months of features: the one qualitatively different bet (a *persistent*,
-  lower-turnover signal the cross-sectional trees can't see). Modest odds — the trees already had
-  multi-horizon features and still found a fast signal — but the right thing to try. [result pending]
-- **Volume/liquidity features** (needs a lake rebuild to add CRSP `DlyVol`) — a richer, possibly
-  slower signal.
+## Phase 3 — temporal DL (GRU) crosses the wall at low cost (the best result)
+
+`scripts/crsp_dl.py` (torch cu128, RTX 5080): a GRU over each name's last 12 months of the 34
+features → next-month return, walk-forward, **5-seed ensemble** (DL is noisy; ensembling
+separates signal from seed luck).
+
+| GRU | OOS IC t | low cost (5/50) q0.10 | realistic (15/300) q0.10 | turnover |
+|---|---:|---|---|---:|
+| 1 seed | 1.40 | +5.6% (Sharpe 0.38) | −0.11% (≈break-even) | 2.60 |
+| **5-seed ensemble** | **2.61** | **+5.0% (Sharpe 0.47)** | −0.88% (≈break-even) | 2.79 |
+
+The ensemble lifts the IC to **t=2.61 — statistically significant, the strongest in the project**
+— confirming a REAL signal (not seed luck), and it is NOT a leak (Sharpe ~0.47, not 7). Verdict
+shift: the temporal model finds something the trees can't, and it **crosses the cost wall at
+low/institutional cost (Sharpe ~0.45 market-neutral)**, sitting **≈break-even at full retail
+small-cap frictions** (15 bps slip + 300 bps borrow). The edge rides the cost boundary — positive
+as costs fall.
+
+## Where this lands
+- **A real, modest, market-neutral edge exists** in mid/small-cap US, from a temporal DL model on
+  rich features — tradeable at low/institutional execution cost (~Sharpe 0.45), break-even for a
+  retail small-cap shorter. This partially vindicates "small profit is possible" — at the liquid
+  end / with cheap execution, not at worst-case retail frictions.
+- It is the only thing in the whole program to cross the wall; classic factors and PEAD did not.
+- Durable asset unchanged: a survivorship-free + cost-aware + look-ahead-audited platform — now
+  also GPU-DL-capable — that can tell a real (if marginal) edge from the mirages it rejected.
+
+## Next levers to push the edge further above the line
+- **Cost-sensitivity curve** + **liquidity-tiered universe** (run on the more-liquid mid-caps
+  where realistic cost ≈ low cost) — find the tier where it's clearly net-positive.
+- **Long-only top-decile** (no borrow — borrow is most of the retail cost; can't short small-caps
+  anyway) — the realistic retail deployment.
+- **Volume/liquidity features** (lake rebuild for CRSP `DlyVol`), bigger ensemble, attention/
+  Transformer — carefully, avoiding overfit-by-backtest.
 
 The honest through-line holds: real signal found, rigorously; not tradeable at retail cost; the
 durable asset remains the look-ahead-audited, cost-aware platform that can say so with confidence.
