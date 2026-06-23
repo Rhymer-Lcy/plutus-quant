@@ -214,26 +214,85 @@ already trades the high-conviction tail, which revisions improve less than bread
 | $10M | 0.14 | 0.24 |
 | $50M | −0.37 | −0.28 |
 
-A genuine improvement from analyst-behavior data orthogonal to price.
+A genuine improvement from analyst-behavior data orthogonal to price. **(All numbers in Phases 1–8
+are in-sample over the 2005–2024 design period; Phase 9 tests whether any of it survives.)**
+
+## Phase 9 — out-of-sample validation (2025 holdout): the edge does not survive
+
+The whole program (features, GRU arch, optimizer config, capital tiers) was designed on 2005–2024.
+To test program-level overfitting, the lake was extended to 2025-12-31 and the LOCKED pipeline
+re-run; 2025 is the only year that did not exist at design time (the walk-forward retrains on data
+< t, so 2025 is predicted by a model that never saw it — genuine OOS).
+
+**The 2025 holdout came back negative.** GRU rank IC mean −0.0214 over n=11 months; the optimized
+book (γ=2, name_cap=0.02, gross=2.0) netted a negative Sharpe at *every* AUM tier (−0.14 @ $25k to
+−1.10 @ $250M). An adversarial audit (4 independent reviewers, every headline number reproduced)
+confirmed there is **no pipeline artifact**: the walk-forward is symmetric (2025 is scored by a
+fresh Jan-2025 model with the same 0–10-month staleness profile as every prior year), no feature or
+standardization leaks backward (features are bit-identical when the lake is truncated at 2024), and
+the 2025 universe (2500 names), price coverage (100%), analyst-revision coverage (75.0%, in line)
+and signal dispersion (0.0048, in line with 2020–23) are all healthy. The failure is **not specific
+to the revision features** either — the price+volume-only GRU also went negative in 2025 (IC −0.016),
+ruling out a stale-IBES explanation.
+
+**But 2025 alone is statistically uninformative** (the audit's key correction to a first, overstated
+read). With n=11 the 2025 mean is not distinguishable from zero (one-sample t=−0.71, p=0.50) nor
+from the +0.0192 design mean (Welch p=0.22); its 95% CI [−0.089, +0.046] contains the design mean;
+and a year at least this weak occurs with P≈0.064 — about 1 in 16 — *even if the edge were fully
+intact* (the design period already had 3 negative years of 16: 2009, 2021, 2024). So 2025 by itself
+neither proves nor refutes decay, and "2024 was also negative" is **not** independent corroboration
+(2024 is in-sample design data and itself insignificant, t=−1.05).
+
+**The decisive evidence is the multi-year fade, not the single holdout.** The design-period t=3.01
+is carried almost entirely by 2010–2019; on trailing windows the edge had already decayed to
+statistical zero *before* any holdout:
+
+| window | n | mean IC | t | p |
+|---|---:|---:|---:|---:|
+| design 2009–24 | 192 | +0.0192 | 3.01 | 0.003 |
+| strong 2010–19 | 120 | +0.0276 | 3.36 | 0.001 |
+| 2020–24 | 60 | +0.0063 | 0.57 | 0.574 |
+| 2021–24 | 48 | +0.0057 | 0.51 | 0.611 |
+| last-24m 2024–25 | 23 | −0.0233 | −1.25 | 0.225 |
+| holdout 2025 | 11 | −0.0214 | −0.71 | 0.496 |
+
+The edge faded roughly monotonically from ~2020; by 2020–2024 it was already indistinguishable from
+zero. 2025 is a continuation of that fade, not a sudden break. (The 2025 Sharpe/capacity figures are
+mechanically downstream of the same ~11 IC months — an n=11 Sharpe carries SE≈±1.0 — so they are
+"consistent with", not independent confirmation of, the IC.)
+
+Scripts: `crsp_dl_oos.py` (per-year IC + 2025 book + capacity), `crsp_oos_diagnostics.py` (data is
+not the cause), `crsp_oos_inference.py` (trailing-window fade + significance).
 
 ## FINAL VERDICT of the quant program
-"Is small profit possible?" — **Yes, for a small (≤ ~$5M) market-neutral book that can short.** A
-temporal-DL signal on rich price+volume+**analyst-revision** features, concentrated via a
-dollar-neutral optimizer, nets **~Sharpe 0.6–0.67 at small AUM ($25k–$500k), ~0.49 at $2M, ~0.24
-at $10M** after costs, borrow, and market impact; capacity ceiling ~$10–30M. It needs shorting (not
-retail long-only) and modest execution. Everything else in the program — classic factors (large &
-small cap), PEAD (even with IBES) — had no tradeable edge after rigor. The path to this single
-real result ran through, and was repeatedly saved by, a survivorship-free + cost-aware +
-look-ahead-audited + capacity-aware platform that rejected every mirage along the way
-(survivorship +372%, PEAD Sharpe 7) — that platform is the durable asset.
+"Is small profit possible?" — **The one signal that looked tradeable in-sample did NOT survive
+out-of-sample.** The temporal-DL small-cap market-neutral edge (in-sample ~Sharpe 0.6–0.67 at small
+AUM) rests on an IC that was real in 2010–2019 (t=3.4) but **decayed to statistical zero by 2020–2024
+(t=0.57), before the 2025 holdout** — which then printed the weakest reading on record (IC −0.021),
+though n=11 makes that single year individually inconclusive. The honest call is **on-watch, do NOT
+deploy**: the edge is no longer statistically detectable, whether from permanent alpha decay/crowding
+or a regime the slow-adapting (one-retrain-per-year) locked design can't trade through — the
+deployment implication is identical. Everything else in the program — classic factors (large & small
+cap), PEAD (even with IBES) — had no tradeable edge after rigor either.
 
-## Next levers (to strengthen / extend the small-AUM edge)
-- **Short-side signals** (analyst revisions [IBES detail, in hand], short interest [可代下]) — the
-  alpha is short-side; strengthening it is the natural next signal work.
-- **Impact-aware optimizer** (penalize illiquid names in the objective) — would raise the capacity
-  ceiling above $10M.
-- **DL archs / Qlib native** (Transformer/TFT/TabNet) — incremental; IC ceiling (~t=2.6) looks
-  reached; low EV, overfit risk.
+**What actually holds up is the platform, not any strategy.** The path ran through, and was
+repeatedly saved by, a survivorship-free + cost-aware + look-ahead-audited + capacity-aware +
+**out-of-sample-validated** harness that rejected every mirage along the way (survivorship +372%,
+PEAD Sharpe 7, and now an in-sample edge that an honest 2025 holdout + trailing-window test showed is
+gone). That platform — and the discipline of letting it deliver a negative verdict — is the durable
+asset.
 
-The honest through-line holds: real signal found, rigorously; not tradeable at retail cost; the
-durable asset remains the look-ahead-audited, cost-aware platform that can say so with confidence.
+## Next steps (given the OOS verdict)
+- **Do not deploy the current signal.** The levers once queued to *strengthen* it (short-interest,
+  impact-aware optimizer) are moot until a signal clears the OOS gate — strengthening a faded edge
+  does not restore it.
+- **If revisited:** a faster-adapting design (monthly/quarterly retrain, regime-aware) validated OOS
+  from the start — the current one-retrain-per-year design under-adapts to the post-2020 regime.
+  Optional hygiene: a 1-month label embargo (`di < t-1`) so training is provably gap-clean (audited
+  as symmetric and conclusion-neutral, but worth doing in any redesign).
+- **Pre-registered decision rule:** declare genuine decay (vs noise) only if pooled 2024-onward IC
+  stays significantly below the design period after ≥2 more years of OOS data accumulate.
+
+The honest through-line holds: a real *historical* signal, found rigorously, that an out-of-sample
+test shows is no longer tradeable; the durable asset remains the survivorship/cost/look-ahead/
+capacity/OOS-rigorous platform that can say so with confidence.

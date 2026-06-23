@@ -90,7 +90,7 @@ def _train(model, Xtr, ytr, device, epochs=15, batch=2048, lr=1e-3):
 
 
 def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refresh: int = 12,
-        hidden: int = 64, epochs: int = 15, ensemble: int = 1) -> dict:
+        hidden: int = 64, epochs: int = 15, ensemble: int = 1, no_extra: bool = False) -> dict:
     ensure_dirs()
     torch.manual_seed(0)
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -105,10 +105,11 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         if vp.exists() and dp.exists():               # volume/liquidity features (if lake has them)
             vol = pd.read_parquet(vp).reindex(columns=adj.columns)
             dvol = pd.read_parquet(dp).reindex(columns=adj.columns)
-        for nm in ("rev1", "rev3", "disp"):           # analyst-revision features (if cached)
-            rp = PARQUET_DIR / f"crsp_smallcap_{nm}.parquet"
-            if rp.exists():
-                extra[nm] = pd.read_parquet(rp).reindex(columns=adj.columns).fillna(0.0)
+        if not no_extra:                              # analyst-revision features (if cached)
+            for nm in ("rev1", "rev3", "disp"):
+                rp = PARQUET_DIR / f"crsp_smallcap_{nm}.parquet"
+                if rp.exists():
+                    extra[nm] = pd.read_parquet(rp).reindex(columns=adj.columns).fillna(0.0)
     else:
         adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
@@ -148,7 +149,8 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         preds[edates[t]] = pd.Series(p, index=tk[te])
     signal = pd.DataFrame(preds).T.sort_index()
     signal.index = pd.to_datetime(signal.index)
-    sig_path = BACKTESTS_DIR / f"crsp_dl_{universe}_gru_signal.parquet"
+    suffix = "_noextra" if no_extra else ""          # keep the locked signal intact for diagnostics
+    sig_path = BACKTESTS_DIR / f"crsp_dl_{universe}_gru_signal{suffix}.parquet"
     signal.to_parquet(sig_path)
     print(f"OOS signal: {signal.shape[0]} months x {signal.shape[1]} names "
           f"(from {signal.index.min().date()})")
@@ -182,9 +184,11 @@ def main() -> int:
     ap.add_argument("--hidden", type=int, default=64)
     ap.add_argument("--epochs", type=int, default=15)
     ap.add_argument("--ensemble", type=int, default=1)
+    ap.add_argument("--no-extra", action="store_true",
+                    help="drop analyst-revision features (price+volume only) for OOS diagnostics")
     args = ap.parse_args()
     run(universe=args.universe, seq_len=args.seq, hidden=args.hidden, epochs=args.epochs,
-        ensemble=args.ensemble)
+        ensemble=args.ensemble, no_extra=args.no_extra)
     return 0
 
 
