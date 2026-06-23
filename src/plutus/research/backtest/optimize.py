@@ -57,11 +57,17 @@ def turnover_aware_weights(alpha: pd.Series, w_prev: pd.Series, gamma: float, sl
 def turnover_aware_backtest(price: pd.DataFrame, signal: pd.DataFrame, eval_dates: list,
                             members_asof=None, *, gamma: float = 5.0, slippage_bps: float = 5.0,
                             borrow_bps_annual: float = 50.0, name_cap: float = 0.02,
-                            gross: float = 2.0, cand_frac: float = 0.3) -> OptResult:
+                            gross: float = 2.0, cand_frac: float = 0.3,
+                            aum: float | None = None, adv: pd.DataFrame | None = None,
+                            impact_coef: float = 0.01) -> OptResult:
     """Walk the optimizer month to month, carrying weights (so turnover is real), net of slippage
     (on turnover, incl. liquidating names that leave the universe) and borrow (on the short leg).
-    `cand_frac`: restrict each period's candidates to the top+bottom fraction by signal (the
-    middle gets zero weight anyway) — keeps the solve small/fast."""
+    `cand_frac`: restrict each period's candidates to the top+bottom fraction by signal.
+
+    Optional MARKET IMPACT (capacity study): if `aum` (book $) and `adv` (a date×name dollar-volume
+    panel reindexed to eval_dates) are given, per-name trade cost rate = slip + impact_coef·
+    sqrt(participation), participation = (|Δw|·aum)/ADV (Almgren square-root law) — so cost rises
+    with AUM relative to each name's liquidity, and the result depends on book size."""
     fwd = price.reindex(eval_dates)
     ppy = 365.25 / np.median(np.diff(pd.DatetimeIndex(eval_dates).asi8) / 8.64e13)
     slip = slippage_bps * 1e-4
@@ -86,11 +92,19 @@ def turnover_aware_backtest(price: pd.DataFrame, signal: pd.DataFrame, eval_date
         allnames = w.index.union(w_prev.index)
         wn = w.reindex(allnames).fillna(0.0)
         wpn = w_prev.reindex(allnames).fillna(0.0)
-        turn = float((wn - wpn).abs().sum())
+        dw = (wn - wpn).abs()
+        turn = float(dw.sum())
+        if aum is not None and adv is not None and t in adv.index:
+            advt = adv.loc[t].reindex(allnames)
+            part = (dw * aum) / advt.where(advt > 0)            # participation = traded$ / ADV$
+            rate = slip + impact_coef * np.sqrt(part.clip(lower=0).fillna(0.0))   # sqrt-impact
+            trade_cost = float((dw * rate).sum())
+        else:
+            trade_cost = turn * slip
         gross_ret = float((w * r.reindex(w.index).fillna(0.0)).sum())
         short_notional = float(w[w < 0].abs().sum())
         dates.append(t1)
-        rets.append(gross_ret - turn * slip - short_notional * borrow_pp)
+        rets.append(gross_ret - trade_cost - short_notional * borrow_pp)
         turns.append(turn)
         grosses.append(float(w.abs().sum()))
         w_prev = w[w.abs() > 0]

@@ -154,8 +154,11 @@ Caveats (so we don't over-claim): (1) **no market-impact** in the cost model →
 MEDIUM AUM (the small/medium capital tiers) where 15 bps slippage is realistic; large AUM would
 erode it (the capacity study, using dollar-volume, is the check). (2) It **requires shorting** the
 bottom names → viable for a small **market-neutral fund**, still not for retail long-only (Phase 4:
-the long leg alone keeps no alpha). (3) name_cap=0.02 is an a-priori risk limit; robustness
-across caps is being verified.
+the long leg alone keeps no alpha). (3) name_cap=0.02 is an a-priori risk limit —
+**robustness CONFIRMED**: realistic-cost Sharpe stays positive across caps (0.17 at ~200 names →
+0.46 at ~100 → 0.62 at ~40 → 0.63 at ~20), rising with concentration. But higher concentration =
+fewer/bigger positions = more impact-sensitive, so the ~100-name **0.46 is the conservative base
+case**; the 0.6+ figures need the capacity (impact) study to trust.
 
 ### Verdict update
 There IS a tradeable market-neutral edge for a small/medium-AUM fund that can short: a temporal-DL
