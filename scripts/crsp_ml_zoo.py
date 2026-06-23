@@ -71,16 +71,21 @@ def run(model: str = "lightgbm", universe: str = "smallcap", rebuild: bool = Fal
     print(f"\nOOS signal rank IC: mean {ic.mean_ic:.4f}  IC-IR {ic.ic_ir:.3f}  "
           f"t {ic.t_stat:.2f}  hit {ic.hit_rate:.2f}  n {ic.n_periods}")
 
-    print(f"\nquintile long-short (monthly, market-neutral), net of costs:")
-    print(f"{'costs':>16s} {'annRet':>8s} {'Sharpe':>7s} {'maxDD':>8s} {'beta':>6s} {'turn':>6s}")
+    # the limiter is cost-per-turnover, not the signal — sweep CONCENTRATION (extreme quantiles
+    # have bigger per-name edge) x time-smoothing x cost, to find any net-positive cell.
+    variants = {"raw": signal, "smooth3": signal.rolling(3, min_periods=1).mean()}
+    print(f"\nlong-short (monthly, market-neutral), net of costs:")
+    print(f"{'signal':8s} {'q':>5s} {'costs':>16s} {'annRet':>8s} {'Sharpe':>7s} {'maxDD':>8s} {'turn':>6s}")
     rows = []
-    for label, slp, brw in [("low 5/50", 5.0, 50.0), ("realistic 15/300", 15.0, 300.0)]:
-        r = quantile_long_short(adj, signal, eval_dates, members_asof, quantile=0.2,
-                                slippage_bps=slp, borrow_bps_annual=brw, market_index=None)
-        rows.append({"costs": label, "ann_return": r.ann_return, "sharpe": r.sharpe,
-                     "max_dd": r.max_drawdown, "turnover": r.avg_turnover})
-        print(f"{label:>16s} {r.ann_return:8.2%} {r.sharpe:7.2f} {r.max_drawdown:8.2%} "
-              f"{r.market_beta:6.2f} {r.avg_turnover:6.2f}")
+    for vname, sig in variants.items():
+        for q in (0.05, 0.10, 0.20):
+            for label, slp, brw in [("low 5/50", 5.0, 50.0), ("realistic 15/300", 15.0, 300.0)]:
+                r = quantile_long_short(adj, sig, eval_dates, members_asof, quantile=q,
+                                        slippage_bps=slp, borrow_bps_annual=brw, market_index=None)
+                rows.append({"signal": vname, "q": q, "costs": label, "ann_return": r.ann_return,
+                             "sharpe": r.sharpe, "max_dd": r.max_drawdown, "turnover": r.avg_turnover})
+                print(f"{vname:8s} {q:5.2f} {label:>16s} {r.ann_return:8.2%} {r.sharpe:7.2f} "
+                      f"{r.max_drawdown:8.2%} {r.avg_turnover:6.2f}")
     atomic_to_parquet(pd.DataFrame(rows), BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}.parquet")
     print(f"\n[OK] {model} on the rich feature set, {universe}, survivorship-free, net of costs. "
           "See docs/ml_zoo_study.md.")
