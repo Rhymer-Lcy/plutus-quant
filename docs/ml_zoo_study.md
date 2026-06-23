@@ -202,13 +202,25 @@ the tails) — so they were fed to the GRU as FEATURES (44 total), not traded st
 | **+ revisions (44)** | **2.98** | **+0.02** | **0.60** |
 
 Revisions lifted the IC (t 2.64 → 2.98) and the naive realistic-cost Sharpe from negative to
-break-even-positive — a genuine, orthogonal improvement (optimizer + capacity on this stronger
-signal re-running; expect the realistic-cost optimized Sharpe and the capacity ceiling to rise).
+break-even-positive. The optimized (concentrated) realistic Sharpe stayed ~0.45 (the optimizer
+already trades the high-conviction tail, which revisions improve less than breadth), but the
+**capacity curve rose at every AUM**:
+
+| AUM | price+volume Sharpe | **+ revisions Sharpe** |
+|---|---:|---:|
+| $25k | 0.55 | **0.67** |
+| $500k | 0.48 | 0.59 |
+| $2M | 0.38 | 0.49 |
+| $10M | 0.14 | 0.24 |
+| $50M | −0.37 | −0.28 |
+
+A genuine improvement from analyst-behavior data orthogonal to price.
 
 ## FINAL VERDICT of the quant program
 "Is small profit possible?" — **Yes, for a small (≤ ~$5M) market-neutral book that can short.** A
-temporal-DL signal on rich features, concentrated via a dollar-neutral optimizer, nets ~Sharpe
-0.4–0.55 at small AUM after costs, borrow, and impact; capacity ~$10M. It needs shorting (not
+temporal-DL signal on rich price+volume+**analyst-revision** features, concentrated via a
+dollar-neutral optimizer, nets **~Sharpe 0.6–0.67 at small AUM ($25k–$500k), ~0.49 at $2M, ~0.24
+at $10M** after costs, borrow, and market impact; capacity ceiling ~$10–30M. It needs shorting (not
 retail long-only) and modest execution. Everything else in the program — classic factors (large &
 small cap), PEAD (even with IBES) — had no tradeable edge after rigor. The path to this single
 real result ran through, and was repeatedly saved by, a survivorship-free + cost-aware +
