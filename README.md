@@ -30,20 +30,20 @@ model, data adapters, universe, and execution are all market-specific.
 > (Sharpe −0.34 to −0.38) — the only gross-positive one (reversal) is a 313%/mo turnover
 > illusion. So classic factors have no tradeable edge in US equities, **large OR small cap**.
 > The durable output is a methodology that tells the truth; the honest frontier is non-classic /
-> alternative signals. First such test — **PEAD** (post-earnings-announcement drift,
-> [docs/pead_study.md](docs/pead_study.md)) — is the first signal with a *pulse*: a positive,
-> near-significant SUE rank IC (t≈0.9) with ~zero market beta, unlike the flat/negative
-> valuation factors. Re-run on the **event clock** ([docs/pead_event_study.md](docs/pead_event_study.md))
-> the drift is confirmed real and front-loaded (CAAR: a clean +0.68% extreme-quintile drift
-> peaking ~day 40, ~90% of it by day 20) — but net of costs it sits exactly on the cost boundary
-> (only extreme surprises held ~10 days is marginally positive, Sharpe ~0.07; longer/looser
-> loses). Pushed into **mid/small caps** ([docs/smallcap_pead_study.md](docs/smallcap_pead_study.md))
-> the drift is ~2× larger (CAAR +1.3% vs +0.68%) and — **the first real gross edge in the
-> project** — a 10-day event long-short returns ~+10%/yr at Sharpe 0.41 *at low cost*; but at
-> realistic small-cap frictions (wide spreads + ~3%/yr borrow) it flips negative. So the
-> conclusion shifts from "no signal" to "a signal gated by execution cost." The path to push it
-> over the line: a sharper surprise (IBES analyst consensus) + borrow/cost-aware selection. No
-> validated alpha yet — `live/strategy.py` is a prior, not a recommendation.
+> alternative signals. Tested **PEAD** (post-earnings-announcement drift) with both a
+> seasonal-random-walk SUE and the real **IBES analyst-consensus surprise**
+> ([docs/ibes_pead_study.md](docs/ibes_pead_study.md)). The drift is **real** (clean, monotone,
+> right-signed CAAR; the IBES surprise gives the largest +0.93%/60d extreme-quintile drift —
+> the data upgrade worked) — **but it is NOT tradeable net of costs.** An early IBES run showing
+> Sharpe **7.6** turned out to be a **look-ahead artifact** (close-to-close entry capturing the
+> post-close announcement gap, the jump only available to whoever forecasts the surprise); the
+> platform caught it, and the fix (`entry_offset`, skip the reaction day) exposed that the same
+> latent leak had been flattering *all* earlier event-time PEAD numbers — including a now-retracted
+> "first real edge (Sharpe 0.41)". De-leaked, every PEAD long-short is negative net of costs
+> (best ≈ Sharpe 0.14 at idealized cost). The tradeable post-announcement drift (~0.6–0.9%/60d)
+> is smaller than the cost of harvesting it. **Net of the whole program: no validated tradeable
+> edge in US equities at retail cost** — the durable asset is the survivorship-free + cost-aware
+> + look-ahead-audited platform. `live/strategy.py` is a prior, not a recommendation.
 
 ## Architecture
 

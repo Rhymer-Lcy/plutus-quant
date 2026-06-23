@@ -44,7 +44,8 @@ def build_events(permno_to_ticker: dict, members_asof) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def run(sue_threshold: float = 0.5, slippage_bps: float = 5.0, borrow_bps_annual: float = 50.0) -> dict:
+def run(sue_threshold: float = 0.5, slippage_bps: float = 5.0, borrow_bps_annual: float = 50.0,
+        entry_offset: int = 1) -> dict:
     ensure_dirs()
     adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
     tmap_df = pd.read_parquet(PARQUET_DIR / "crsp_ticker_map.parquet")
@@ -59,8 +60,9 @@ def run(sue_threshold: float = 0.5, slippage_bps: float = 5.0, borrow_bps_annual
     print(f"  {len(events):,} SUE events ({events['entry_date'].min().date()} -> "
           f"{events['entry_date'].max().date()})")
 
-    # (1) CAAR — drift shape by SUE quintile, in event time
-    caar = event_caar(events, ret, hold_days=60, n_groups=5)
+    # (1) CAAR — drift shape by SUE quintile, in event time (entry_offset skips the
+    #     announcement-reaction-day gap so close-to-close returns don't capture the jump)
+    caar = event_caar(events, ret, hold_days=60, n_groups=5, entry_offset=entry_offset)
     tmb = caar["top_minus_bottom"]
     print("\nCAAR top-minus-bottom (Q5−Q1) cumulative abnormal return, by event day:")
     for d in [5, 10, 20, 40, 60]:
@@ -75,7 +77,8 @@ def run(sue_threshold: float = 0.5, slippage_bps: float = 5.0, borrow_bps_annual
     rows = []
     for h in [10, 20, 40, 60]:
         r = event_time_portfolio(events, ret, hold_days=h, sue_threshold=sue_threshold,
-                                 slippage_bps=slippage_bps, borrow_bps_annual=borrow_bps_annual)
+                                 slippage_bps=slippage_bps, borrow_bps_annual=borrow_bps_annual,
+                                 entry_offset=entry_offset)
         rows.append({"hold_days": h, "ann_return": r.ann_return, "ann_vol": r.ann_vol,
                      "sharpe": r.sharpe, "max_dd": r.max_drawdown,
                      "avg_long": r.avg_long, "avg_short": r.avg_short})
@@ -91,9 +94,10 @@ def main() -> int:
     ap.add_argument("--sue-threshold", type=float, default=0.5)
     ap.add_argument("--slippage-bps", type=float, default=5.0)
     ap.add_argument("--borrow-bps-annual", type=float, default=50.0)
+    ap.add_argument("--entry-offset", type=int, default=1)
     args = ap.parse_args()
     run(sue_threshold=args.sue_threshold, slippage_bps=args.slippage_bps,
-        borrow_bps_annual=args.borrow_bps_annual)
+        borrow_bps_annual=args.borrow_bps_annual, entry_offset=args.entry_offset)
     return 0
 
 

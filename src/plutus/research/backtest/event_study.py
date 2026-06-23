@@ -30,16 +30,21 @@ def _entry_positions(idx: pd.DatetimeIndex, entry_dates) -> np.ndarray:
 
 
 def event_caar(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_days: int = 60,
-               n_groups: int = 3) -> pd.DataFrame:
+               n_groups: int = 3, entry_offset: int = 0) -> pd.DataFrame:
     """Mean cumulative ABNORMAL return (name return minus that day's cross-sectional mean) over
     event days 1..hold_days, averaged across events within each surprise group (n_groups tiles
     of `sue`). Returns a DataFrame indexed by event day, one column per group (group 0 = lowest
-    SUE ... n_groups-1 = highest). The top-minus-bottom path is the PEAD drift."""
+    SUE ... n_groups-1 = highest). The top-minus-bottom path is the PEAD drift.
+
+    `entry_offset`: extra trading days to wait before accruing returns. Use >=1 to SKIP the
+    announcement-reaction day — with close-to-close returns, a post-close announcement's
+    overnight gap lands in the first day after `entry_date` and would otherwise be miscounted
+    as drift (a look-ahead/jump-capture artifact). entry_offset=1 measures true post-event drift."""
     idx = ret_panel.index
     abn = ret_panel.sub(ret_panel.mean(axis=1), axis=0)        # market-neutral abnormal return
     ev = events.dropna(subset=["permno", "entry_date", "sue"]).copy()
     ev["grp"] = pd.qcut(ev["sue"].rank(method="first"), n_groups, labels=False)
-    ev["epos"] = _entry_positions(idx, ev["entry_date"])
+    ev["epos"] = _entry_positions(idx, ev["entry_date"]) + entry_offset
 
     sums = {g: np.zeros(hold_days) for g in range(n_groups)}
     counts = {g: np.zeros(hold_days) for g in range(n_groups)}
@@ -73,15 +78,19 @@ class EventPortfolioResult:
 
 def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_days: int = 40,
                          sue_threshold: float = 0.5, slippage_bps: float = 5.0,
-                         borrow_bps_annual: float = 50.0) -> EventPortfolioResult:
+                         borrow_bps_annual: float = 50.0, entry_offset: int = 0) -> EventPortfolioResult:
     """Dollar-neutral overlapping long-short: each event with sue >= +threshold is held LONG for
     `hold_days` trading days from the day after filing; sue <= -threshold held SHORT. Equal-
     weight within each leg each day. Net of per-turnover slippage (both legs) and a daily borrow
-    fee on the short leg."""
+    fee on the short leg.
+
+    `entry_offset`: extra trading days to wait before entering — use >=1 to skip the
+    announcement-reaction day so the close-to-close engine does not capture the post-close
+    overnight gap as if it were tradeable drift (look-ahead/jump-capture)."""
     idx = ret_panel.index
     n = len(idx)
     ev = events.dropna(subset=["permno", "entry_date", "sue"]).copy()
-    ev["epos"] = _entry_positions(idx, ev["entry_date"])
+    ev["epos"] = _entry_positions(idx, ev["entry_date"]) + entry_offset
 
     long_on: dict[int, list] = defaultdict(list)
     short_on: dict[int, list] = defaultdict(list)

@@ -46,6 +46,17 @@ def test_event_portfolio_captures_drift_and_costs_bite():
     assert costly.ann_return < free.ann_return         # turnover cost drags it
 
 
+def test_entry_offset_skips_the_first_day():
+    # entry_offset delays entry by N trading days (used to skip the announcement-reaction-day
+    # gap). Skipping a day of the drift must capture strictly less.
+    ret, events = _panels()
+    full = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                slippage_bps=0.0, borrow_bps_annual=0.0, entry_offset=0)
+    skipped = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                   slippage_bps=0.0, borrow_bps_annual=0.0, entry_offset=2)
+    assert skipped.ann_return < full.ann_return
+
+
 def test_threshold_excludes_neutral_events():
     ret, events = _panels()
     # threshold above the neutral SUE (0) but below the ±2 surprises -> only 4 long / 4 short names

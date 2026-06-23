@@ -1,5 +1,13 @@
 # Small-cap PEAD — the first real gross edge, gated by cost
 
+> ⚠ **RETRACTED / CORRECTED (see docs/ibes_pead_study.md).** The headline result below
+> (+10.3%/yr, Sharpe 0.41 at low cost) was a **look-ahead artifact**: with close-to-close
+> returns, entering the day after the announcement captured the post-close overnight GAP (the
+> announcement jump), not tradeable drift. Fixed with `entry_offset=1` (skip the reaction day).
+> De-leaked, the same strategy is **−5.2%/yr (Sharpe −0.25) at hold-10, negative at every
+> horizon** — NOT a tradeable edge. The CAAR below is similarly gap-inflated (de-leaked Q5−Q1
+> drift is ~+0.6% over 60 days, not +1.3%). Read this doc only with that correction in mind.
+
 The large-cap event-time PEAD sat on the cost boundary (docs/pead_event_study.md). The
 literature says the drift is larger in small caps. This tests it: SUE earnings-surprise events
 for the mid/small cap-band (rank 501–3000), event-clock CAAR + overlapping long-short, on
