@@ -85,6 +85,44 @@ as costs fall.
 - Durable asset unchanged: a survivorship-free + cost-aware + look-ahead-audited platform — now
   also GPU-DL-capable — that can tell a real (if marginal) edge from the mirages it rejected.
 
+## Phase 4 — is it deployable for retail? (scripts/crsp_dl_tradability.py)
+
+**A. Long-only top-decile (no borrow — the realistic retail form) vs equal-weight band benchmark.**
+
+| | CAGR | Sharpe | maxDD | active-IR |
+|---|---:|---:|---:|---:|
+| equal-weight band (benchmark) | 11.8% | 0.68 | −46% | — |
+| GRU long-only top-decile @ 5bps | 11.7% | 0.65 | **−34%** | **0.00** |
+| … @ 15bps | 10.3% | 0.59 | −36% | −0.14 |
+
+Long-only keeps **no return alpha** (active-IR ≈ 0) — it roughly matches equal-weighting, just
+with a lower drawdown. **The edge lives in the SHORT leg** (the bottom decile underperforms),
+which retail can't harvest (can't short small caps).
+
+**B. Market-neutral q0.10 net Sharpe across cost (the breakeven map):** positive at slip ≤10bps &
+borrow ≤150bps/yr (Sharpe 0.21–0.53); ≈zero around slip 15–20 + borrow 150–300; **retail small-cap
+(15/300) = −0.08**; institutional (3–5bps/50) = 0.47–0.53. Breakeven ≈ slip 12bps + borrow 150bps.
+
+**C. Liquidity tiers (market-neutral q0.10), same signal:**
+
+| tier (cap rank) | low 5/50 | mid 10/150 | real 15/300 |
+|---|---:|---:|---:|
+| 501–1000 (most liquid) | −0.09 | −0.31 | −0.56 |
+| 501–2500 | 0.39 | 0.13 | −0.16 |
+| **1501–3000 (smaller)** | **0.46** | **0.24** | −0.02 |
+
+The alpha is **stronger in the smaller / less-liquid tier** (less arbitraged) — but that is exactly
+where execution costs are highest. Classic tension: the edge is where it's hardest to trade.
+
+### Deployability verdict
+- **Retail (long-only, small-cap costs): no usable edge** — the alpha is short-side + in illiquid
+  names; long-only ≈ the benchmark (better drawdown, no excess return).
+- **Low-cost market-neutral fund (can short, ~5–10bps slip, ≤150bps borrow): marginally yes** —
+  a real ~Sharpe 0.2–0.5 market-neutral edge, strongest in the smaller tier. Institutional-grade
+  and small, not a retail money-maker.
+- So "small profit possible?" — **yes for a low-cost market-neutral book, no for retail long-only.**
+  The edge is real (IC t=2.6) but structurally sits just past where retail frictions can reach it.
+
 ## Next levers to push the edge further above the line
 - **Cost-sensitivity curve** + **liquidity-tiered universe** (run on the more-liquid mid-caps
   where realistic cost ≈ low cost) — find the tier where it's clearly net-positive.
