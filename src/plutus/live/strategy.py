@@ -31,17 +31,20 @@ class CandidateStrategy:
 
 CANDIDATE = CandidateStrategy()
 
-# Paper-trading capital tiers (USD), grouped small / medium / large. NOTE: unlike A-shares,
-# US has NO 100-share lot and (at many brokers) supports fractional shares, so there is no
-# hard small-account feasibility floor -- a 10-name book is feasible even at a few thousand
-# dollars. Tiers here are a SCALE reference (does behaviour change with size?), and assume
-# negligible market impact (flat slippage, no size-dependent impact term -- NOT modeled).
+# Capital tiers (USD). The US constraint is the OPPOSITE of A-shares: with fractional shares and
+# no 100-share lot there is NO small-account feasibility floor (a 250-name book is fine at $25k),
+# so the tiers instead bracket the CAPACITY knee -- the AUM at which MARKET IMPACT in mid/small
+# caps (position size vs a name's average daily dollar volume, ADV) starts to erode the edge.
+# Impact is modeled from CRSP dollar-volume (DlyPrcVol) in the capacity studies, not a flat slip.
+#   small  [$25k, $100k, $500k]  -- retail: impact negligible even in small caps (the edge's
+#                                   home turf is fully accessible here).
+#   medium [$2M, $10M]           -- serious individual / small fund: impact modest, working regime.
+#   large  [$50M, $250M]         -- fund scale: moving the mid/small basket costs real impact ->
+#                                   the capacity ceiling where the (small) edge degrades.
 CAPITAL_TIERS: dict[str, list[int]] = {
-    "small": [5_000, 10_000, 25_000],     # (the old $25k pattern-day-trader minimum was
-                                          # ELIMINATED 2026-06-04; irrelevant to a monthly
-                                          # book anyway -- kept only as a round reference point)
-    "medium": [100_000, 500_000],
-    "large": [1_000_000, 5_000_000],
+    "small": [25_000, 100_000, 500_000],
+    "medium": [2_000_000, 10_000_000],
+    "large": [50_000_000, 250_000_000],
 }
 ALL_TIERS: list[int] = [v for tier in CAPITAL_TIERS.values() for v in tier]
 TIER_LABEL: dict[int, str] = {v: label for label, tier in CAPITAL_TIERS.items() for v in tier}
