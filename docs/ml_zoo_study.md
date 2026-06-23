@@ -45,12 +45,24 @@ t≈2.5, but to turn the −5.5% realistic-cost result positive you'd need to ro
 gross spread without adding turnover — which no model upgrade plausibly delivers from these
 features. The market is efficient *relative to retail costs*.
 
-## Still on the Phase-2 list (for completeness + one real hope)
-- **XGBoost / CatBoost** — confirm the tree family agrees (expected: similar IC, same cost wall).
-- **DL on the V100×8** (MLP / GRU-LSTM / Transformer / TabNet) — the one qualitatively different
-  bet: a TEMPORAL model might find a more PERSISTENT (lower-turnover) signal the cross-sectional
-  trees didn't, which is the only way the cost wall gets crossed. Modest odds, but the right
-  thing to try given the hardware.
+## Phase 2 — tree family confirms (XGBoost / CatBoost)
+
+| model | OOS IC t | best net Sharpe (low cost) | realistic cost |
+|---|---:|---|---|
+| LightGBM | 1.90 | ~0.01 (q0.20) | all negative |
+| **XGBoost** | 1.91 | **+0.19** (q0.05) | all negative (−3.6%…) |
+| CatBoost | 1.85 | +0.09 (q0.10) | all negative |
+
+All three tree models agree: the same real signal (t≈1.85–1.91, mean IC ≈0.011), robust across
+implementations. XGBoost is marginally the most harvestable — at **low (institutional/liquid)
+cost** its extreme-quintile long-short is mildly positive (Sharpe ~0.19) — but at **realistic
+small-cap cost every model is negative**. The cost wall stands; a better tree didn't cross it.
+
+## Still open (one real hope + a data lever)
+- **DL on the GPU** (local: 1× RTX 5080 16GB) — `scripts/crsp_dl.py` runs a TEMPORAL GRU over
+  each name's last 12 months of features: the one qualitatively different bet (a *persistent*,
+  lower-turnover signal the cross-sectional trees can't see). Modest odds — the trees already had
+  multi-horizon features and still found a fast signal — but the right thing to try. [result pending]
 - **Volume/liquidity features** (needs a lake rebuild to add CRSP `DlyVol`) — a richer, possibly
   slower signal.
 
