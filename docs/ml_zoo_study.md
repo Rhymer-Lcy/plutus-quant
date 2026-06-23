@@ -167,11 +167,42 @@ This is the first thing to clearly clear realistic costs. It is small, needs sho
 (small AUM), and is not retail-long-only — but it is real, and it vindicates "small profit is
 possible" for the right (small fund) setup.
 
-## Next levers (ranked by EV)
-- **Capacity study** (impact from dollar-volume × capital tiers) — find the AUM where the edge
-  erodes; turns "Sharpe 0.46" into "$X capacity at Sharpe Y".
+## Phase 7 — capacity: a small-AUM edge (the verdict)
+
+Same optimized book, but the per-name cost now includes square-root market impact (cost rate =
+5bps + impact_coef·√(traded$/ADV$) + 300bps/yr borrow), run at each capital tier:
+
+| AUM | tier | ann return | **Sharpe (with impact)** |
+|---|---:|---:|---:|
+| $25k | small | 8.9% | **0.55** |
+| $100k | small | 8.6% | 0.53 |
+| $500k | small | 7.7% | 0.48 |
+| $2M | medium | 6.1% | 0.38 |
+| $10M | medium | 2.2% | 0.14 |
+| $50M | large | −5.9% | −0.37 |
+| $250M | large | −22.0% | −1.37 |
+
+**The edge is a SMALL-AUM edge.** Net of realistic costs + impact it earns ~Sharpe 0.5 / ~8%/yr
+up to a few hundred $k, fades through the low-$millions, and dies (negative) by ~$50M. **Capacity
+ceiling ≈ $10M.** This is precisely a *retail/small-player* edge — it survives only because it is
+too small for big money to arbitrage. (impact_coef is an assumption; the curve's SHAPE — positive
+small, negative large — is the robust result; the exact ceiling moves with the impact calibration.)
+
+## FINAL VERDICT of the quant program
+"Is small profit possible?" — **Yes, for a small (≤ ~$5M) market-neutral book that can short.** A
+temporal-DL signal on rich features, concentrated via a dollar-neutral optimizer, nets ~Sharpe
+0.4–0.55 at small AUM after costs, borrow, and impact; capacity ~$10M. It needs shorting (not
+retail long-only) and modest execution. Everything else in the program — classic factors (large &
+small cap), PEAD (even with IBES) — had no tradeable edge after rigor. The path to this single
+real result ran through, and was repeatedly saved by, a survivorship-free + cost-aware +
+look-ahead-audited + capacity-aware platform that rejected every mirage along the way
+(survivorship +372%, PEAD Sharpe 7) — that platform is the durable asset.
+
+## Next levers (to strengthen / extend the small-AUM edge)
 - **Short-side signals** (analyst revisions [IBES detail, in hand], short interest [可代下]) — the
   alpha is short-side; strengthening it is the natural next signal work.
+- **Impact-aware optimizer** (penalize illiquid names in the objective) — would raise the capacity
+  ceiling above $10M.
 - **DL archs / Qlib native** (Transformer/TFT/TabNet) — incremental; IC ceiling (~t=2.6) looks
   reached; low EV, overfit risk.
 
