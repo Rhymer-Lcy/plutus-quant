@@ -7,7 +7,7 @@ compare net Sharpe to the naive quintile baseline. (gamma swept in-sample -> the
 optimistic; shows whether the lever helps at all.)
 
     conda activate plutus
-    python scripts/crsp_dl_optimize.py
+    python scripts/crsp_gru_optimize_study.py
 """
 from __future__ import annotations
 

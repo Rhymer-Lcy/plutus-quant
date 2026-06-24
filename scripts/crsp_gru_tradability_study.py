@@ -1,5 +1,5 @@
 """Is the GRU edge actually deployable for a retail trader? Three rigorous checks on the cached
-5-seed ensemble GRU signal (scripts/crsp_dl.py):
+5-seed ensemble GRU signal (scripts/crsp_gru_pipeline.py):
 
   A. LONG-ONLY top-decile (no shorting/borrow — retail can't short small caps) vs the equal-weight
      same-universe benchmark, net of slippage. Does the tilt add alpha you can actually keep?
@@ -11,8 +11,8 @@
 No training here (signal is cached) — pure, fast, survivorship-free, cost-aware evaluation.
 
     conda activate plutus
-    python scripts/crsp_dl.py --universe smallcap --ensemble 5   # produces the signal
-    python scripts/crsp_dl_tradability.py
+    python scripts/crsp_gru_pipeline.py --universe smallcap --ensemble 5   # produces the signal
+    python scripts/crsp_gru_tradability_study.py
 """
 from __future__ import annotations
 

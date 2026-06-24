@@ -9,7 +9,7 @@ filling the disk) and is cached to parquet; reruns of the study are fast.
 
     conda activate plutus
     python scripts/build_crsp_smallcap_lake.py     # once
-    python scripts/crsp_smallcap_pead.py           # needs SEC_EDGAR_USER_AGENT; first run slow
+    python scripts/crsp_smallcap_pead_study.py           # needs SEC_EDGAR_USER_AGENT; first run slow
 """
 from __future__ import annotations
 

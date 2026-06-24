@@ -2,7 +2,7 @@
 
 **Purpose:** exercise the whole stack end-to-end on real data and get an honest first read. This
 is a **capability readout, NOT a tradeable result** — read the caveats before drawing any
-conclusion. Reproduce with `scripts/build_price_lake.py` then `scripts/factor_study.py`.
+conclusion. Reproduce with `scripts/build_price_lake.py` then `scripts/crsp_factor_study.py`.
 
 ## Setup
 

@@ -7,7 +7,7 @@ the net Sharpe gives the CAPACITY curve — the AUM where moving the mid/small b
 ADV = 21-day mean CRSP dollar volume. (impact_coef is an assumption; the curve's SHAPE is the point.)
 
     conda activate plutus
-    python scripts/crsp_dl_capacity.py
+    python scripts/crsp_gru_capacity_study.py
 """
 from __future__ import annotations
 

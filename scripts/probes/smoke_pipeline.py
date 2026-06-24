@@ -17,7 +17,7 @@ import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))   # make scripts/ importable
 
-from value_reversal_study import run_study   # noqa: E402
+from crsp_value_reversal_study import run_study   # noqa: E402
 
 TICKERS = ["AAPL", "MSFT", "NVDA", "XOM", "JPM", "PG"]
 

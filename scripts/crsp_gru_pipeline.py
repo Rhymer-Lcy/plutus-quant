@@ -6,7 +6,7 @@ lower-turnover) signal — the only way the cost wall plausibly gets crossed. Wa
 evaluated with the same survivorship-free + cost-aware harness as the tree zoo.
 
     conda activate plutus
-    python scripts/crsp_dl.py --universe smallcap --seq 12
+    python scripts/crsp_gru_pipeline.py --universe smallcap --seq 12
 """
 from __future__ import annotations
 

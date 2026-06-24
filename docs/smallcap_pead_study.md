@@ -12,7 +12,7 @@ The large-cap event-time PEAD sat on the cost boundary (docs/pead_event_study.md
 literature says the drift is larger in small caps. This tests it: SUE earnings-surprise events
 for the mid/small cap-band (rank 501–3000), event-clock CAAR + overlapping long-short, on
 survivorship-free CRSP. 74,194 events, 2,567 names, 2010–2024 (SEC XBRL era). Reproduce:
-`scripts/crsp_smallcap_pead.py [--slippage-bps --borrow-bps-annual]`.
+`scripts/crsp_smallcap_pead_study.py [--slippage-bps --borrow-bps-annual]`.
 
 ## The drift is ~2× the large-cap drift (CAAR)
 

@@ -59,7 +59,7 @@ PAPER_INCEPTION = "2026-01-02"
 # so the tiers instead bracket the CAPACITY knee -- the AUM at which MARKET IMPACT in mid/small
 # caps (position size vs a name's average daily dollar volume, ADV) starts to erode the edge.
 # Impact is NOT modeled by the flat-slippage engine; read the large tiers as "does it scale",
-# cross-checked against the dollar-volume capacity studies (scripts/crsp_dl_capacity.py).
+# cross-checked against the dollar-volume capacity studies (scripts/crsp_gru_capacity_study.py).
 #   small  [$25k, $100k, $500k]  -- retail: impact negligible even in small caps (the edge's
 #                                   home turf is fully accessible here).
 #   medium [$2M, $10M]           -- serious individual / small fund: impact modest, working regime.

@@ -12,7 +12,7 @@ the historical spread (not a negative outlier), the edge survives the only genui
 we have. The design is frozen here: gamma=2, name_cap=0.02, gross=2.0 — the exact capacity config.
 
     conda activate plutus
-    python scripts/crsp_dl_oos.py
+    python scripts/crsp_gru_oos_study.py
 """
 from __future__ import annotations
 

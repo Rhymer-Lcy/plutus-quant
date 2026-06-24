@@ -12,7 +12,7 @@ This is a CAPABILITY + a sanity harness, NOT a validated result. Run it on a han
 first (scripts/probes/smoke_pipeline.py), then on a real PIT S&P 500 universe.
 
     conda activate plutus
-    python scripts/value_reversal_study.py AAPL MSFT NVDA XOM JPM PG --start 2018-01-01 --end 2025-12-31
+    python scripts/crsp_value_reversal_study.py AAPL MSFT NVDA XOM JPM PG --start 2018-01-01 --end 2025-12-31
 """
 from __future__ import annotations
 

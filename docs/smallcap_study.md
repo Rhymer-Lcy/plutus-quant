@@ -5,7 +5,7 @@ The standard hope is that premia survive where arbitrage capital can't fish — 
 This tests it directly: a broad survivorship-free CRSP universe (11,219 common stocks, major
 exchange, price ≥ $5, cap ≥ $100M, 2005–2024), restricted to the cap-rank **band 501–3000**
 (mid/small, ~2,500 names), market-neutral quintile long-short on price factors, two cost levels.
-Reproduce: `scripts/build_crsp_smallcap_lake.py` → `scripts/crsp_smallcap_longshort.py`.
+Reproduce: `scripts/build_crsp_smallcap_lake.py` → `scripts/crsp_smallcap_longshort_study.py`.
 
 ## Quintile long-short on the mid/small band
 

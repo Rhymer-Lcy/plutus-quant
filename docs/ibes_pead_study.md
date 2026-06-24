@@ -4,7 +4,7 @@ The crude seasonal-random-walk SUE left small-cap PEAD just shy of the cost line
 real surprise — actual vs the analyst CONSENSUS just before the announcement — which should
 separate the quintiles far more sharply. This is that test. It also caught a look-ahead bug that
 had been quietly inflating every event-time PEAD result; the honest story is below.
-Reproduce: `scripts/crsp_ibes_pead.py [--entry-offset N]`.
+Reproduce: `scripts/crsp_ibes_pead_study.py [--entry-offset N]`.
 
 Setup: IBES US EPS unadjusted (detail + actuals) → analyst-consensus surprise events (180k
 events, 6,842 mid/small names, ~7 analysts/event, 2005–2026), linked CUSIP→CRSP PERMNO,

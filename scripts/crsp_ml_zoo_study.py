@@ -9,7 +9,7 @@ baseline — if the rich features lift it, escalate to DL on the GPU.
 
     conda activate plutus
     python scripts/build_crsp_smallcap_lake.py    # once (universe + prices)
-    python scripts/crsp_ml_zoo.py --model lightgbm --universe smallcap
+    python scripts/crsp_ml_zoo_study.py --model lightgbm --universe smallcap
 """
 from __future__ import annotations
 

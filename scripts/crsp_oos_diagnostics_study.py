@@ -10,7 +10,7 @@ calling that overfit/decay, rule out the boring explanations:
 This reports per-year, so 2025 can be compared to the design period on each axis.
 
     conda activate plutus
-    python scripts/crsp_oos_diagnostics.py
+    python scripts/crsp_oos_diagnostics_study.py
 """
 from __future__ import annotations
 

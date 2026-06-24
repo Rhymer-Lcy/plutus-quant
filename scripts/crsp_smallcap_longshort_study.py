@@ -11,7 +11,7 @@ realistic high-borrow run. Compare to the large-cap null result (docs/longshort_
 
     conda activate plutus
     python scripts/build_crsp_smallcap_lake.py        # once
-    python scripts/crsp_smallcap_longshort.py --slippage-bps 15 --borrow-bps-annual 300
+    python scripts/crsp_smallcap_longshort_study.py --slippage-bps 15 --borrow-bps-annual 300
 """
 from __future__ import annotations
 

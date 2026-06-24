@@ -4,7 +4,7 @@ The classic 6 factors had ~0 IC. The untried lever was a much larger feature spa
 stronger models. Phase 1: ~34 Alpha158-style price/size features
 (research.factors.alpha_features) → walk-forward LightGBM → OOS monthly signal on the
 survivorship-free mid/small-cap CRSP universe (11,219 names, 490k samples, OOS 2008–2024).
-Reproduce: `scripts/crsp_ml_zoo.py --model lightgbm --universe smallcap`.
+Reproduce: `scripts/crsp_ml_zoo_study.py --model lightgbm --universe smallcap`.
 
 ## The signal is REAL — the first genuine predictive edge in the project
 
@@ -60,7 +60,7 @@ small-cap cost every model is negative**. The cost wall stands; a better tree di
 
 ## Phase 3 — temporal DL (GRU) crosses the wall at low cost (the best result)
 
-`scripts/crsp_dl.py` (torch cu128, RTX 5080): a GRU over each name's last 12 months of the 34
+`scripts/crsp_gru_pipeline.py` (torch cu128, RTX 5080): a GRU over each name's last 12 months of the 34
 features → next-month return, walk-forward, **5-seed ensemble** (DL is noisy; ensembling
 separates signal from seed luck).
 
@@ -85,7 +85,7 @@ as costs fall.
 - Durable asset unchanged: a survivorship-free + cost-aware + look-ahead-audited platform — now
   also GPU-DL-capable — that can tell a real (if marginal) edge from the mirages it rejected.
 
-## Phase 4 — is it deployable for retail? (scripts/crsp_dl_tradability.py)
+## Phase 4 — is it deployable for retail? (scripts/crsp_gru_tradability_study.py)
 
 **A. Long-only top-decile (no borrow — the realistic retail form) vs equal-weight band benchmark.**
 
@@ -261,8 +261,8 @@ zero. 2025 is a continuation of that fade, not a sudden break. (The 2025 Sharpe/
 mechanically downstream of the same ~11 IC months — an n=11 Sharpe carries SE≈±1.0 — so they are
 "consistent with", not independent confirmation of, the IC.)
 
-Scripts: `crsp_dl_oos.py` (per-year IC + 2025 book + capacity), `crsp_oos_diagnostics.py` (data is
-not the cause), `crsp_oos_inference.py` (trailing-window fade + significance).
+Scripts: `crsp_gru_oos_study.py` (per-year IC + 2025 book + capacity), `crsp_oos_diagnostics_study.py` (data is
+not the cause), `crsp_oos_inference_study.py` (trailing-window fade + significance).
 
 ## FINAL VERDICT of the quant program
 "Is small profit possible?" — **The one signal that looked tradeable in-sample did NOT survive

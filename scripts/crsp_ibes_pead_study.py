@@ -8,7 +8,7 @@ survivorship-free small/mid-cap CRSP lake. Events are cached to parquet (first b
 
     conda activate plutus
     python scripts/build_crsp_smallcap_lake.py   # once (prices)
-    python scripts/crsp_ibes_pead.py             # first run builds events (slow)
+    python scripts/crsp_ibes_pead_study.py             # first run builds events (slow)
 """
 from __future__ import annotations
 

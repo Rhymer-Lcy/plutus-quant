@@ -1,6 +1,6 @@
 """Rigorous inference layer for the OOS result — does the data support 'the edge decayed', and how?
 
-An adversarial audit of crsp_dl_oos.py found NO bug, but flagged that 'the 2025 holdout proves the
+An adversarial audit of crsp_gru_oos_study.py found NO bug, but flagged that 'the 2025 holdout proves the
 edge failed / is overfit' OVERSTATES a single n=11 year (one-sample t=-0.71, p=0.50; not even
 distinguishable from the design-period mean). The decision-relevant evidence is instead the
 MULTI-YEAR trailing fade: the edge was already ~statistical-zero by 2020-2024, before any holdout.
@@ -11,7 +11,7 @@ This script computes, from the cached locked GRU signal (no GRU re-run needed):
      and P(a yearly mean this low | the edge were fully intact) — the '~1-in-16' sanity check.
 
     conda activate plutus
-    python scripts/crsp_oos_inference.py
+    python scripts/crsp_oos_inference_study.py
 """
 from __future__ import annotations
 

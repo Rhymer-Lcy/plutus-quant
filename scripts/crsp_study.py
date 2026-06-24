@@ -5,7 +5,7 @@ and PIT membership are all survivorship-free (delisted names included while they
 then their series ends and the engine force-liquidates). Fundamentals come from SEC EDGAR via
 PERMNO->ticker->CIK.
 
-Contrast with scripts/factor_study.py (yfinance), which is missing ~16% of PIT members
+Contrast with scripts/crsp_factor_study.py (yfinance), which is missing ~16% of PIT members
 (delisted) and so leans optimistic. This script is the honest version.
 
 HONEST SCOPE: prices/returns/universe are fully survivorship-free here. The SEC-fundamentals
