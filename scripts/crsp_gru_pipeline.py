@@ -25,7 +25,7 @@ from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import alpha_features as af
 from plutus.research.factors import library as fl
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 class GRUNet(nn.Module):
@@ -99,7 +99,7 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
     if universe == "smallcap":
         adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-        members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+        members_asof = crsp.size_band_members_asof(cap)
         vp = PARQUET_DIR / "crsp_smallcap_volume.parquet"
         dp = PARQUET_DIR / "crsp_smallcap_dollarvol.parquet"
         if vp.exists() and dp.exists():               # volume/liquidity features (if lake has them)
@@ -116,7 +116,7 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         spells = pd.read_parquet(PARQUET_DIR / "crsp_members.parquet")
         _m = crsp.members_asof_from_spells(spells)
         members_asof = lambda d: {str(p) for p in _m(d)}
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} months, device={device}, "
           f"volume={'yes' if vol is not None else 'no'}, extra={sorted(extra)}")
 

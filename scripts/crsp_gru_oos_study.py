@@ -28,7 +28,7 @@ from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
 from plutus.research.backtest.optimize import turnover_aware_backtest
 from plutus.research.eval.factor_eval import compute_ic
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 HOLDOUT = 2025          # the year added AFTER the whole design was frozen
 PPY = 12                # monthly eval
@@ -55,8 +55,8 @@ def main() -> int:
     dvol = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_dollarvol.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / args.signal)
     print(f"signal file: {args.signal}")
-    eval_dates = _month_ends(adj.index)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    eval_dates = month_ends(adj.index)
+    band = crsp.size_band_members_asof(cap)
     sig = signal.reindex(eval_dates)
     adv = dvol.rolling(21, min_periods=5).mean().reindex(eval_dates)
 

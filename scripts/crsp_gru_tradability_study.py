@@ -25,7 +25,7 @@ from plutus.research.backtest.frictions import USEquityCosts
 from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.backtest.portfolio import signal_portfolio_backtest
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def _metrics(monthly_ret: pd.Series) -> dict:
@@ -53,9 +53,9 @@ def main() -> int:
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     signal = signal.reindex(eval_dates)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    band = crsp.size_band_members_asof(cap)
     print(f"GRU signal: {signal.notna().any(axis=1).sum()} active months, {adj.shape[1]} names\n")
 
     # --- A. long-only top-decile vs equal-weight benchmark (no borrow) ---

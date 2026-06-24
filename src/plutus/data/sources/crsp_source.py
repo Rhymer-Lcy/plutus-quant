@@ -195,3 +195,11 @@ def latest_ticker_map(long: pd.DataFrame) -> dict[int, str]:
     """PERMNO -> its most recent ticker (for joining to SEC EDGAR fundamentals by ticker)."""
     d = long.dropna(subset=["Ticker"]).sort_values("date")
     return {int(k): str(v) for k, v in d.groupby("PERMNO")["Ticker"].last().items()}
+
+
+def ticker_panel_to_permno(panel_tkr: pd.DataFrame, permno_to_ticker: dict) -> pd.DataFrame:
+    """Re-key a ticker-columned panel to PERMNO columns via the PERMNO->ticker map (the inverse of
+    joining SEC fundamentals, which arrive keyed by ticker, back onto the PERMNO-keyed CRSP lake)."""
+    cols = {permno: panel_tkr[tkr] for permno, tkr in permno_to_ticker.items()
+            if tkr in panel_tkr.columns}
+    return pd.DataFrame(cols)

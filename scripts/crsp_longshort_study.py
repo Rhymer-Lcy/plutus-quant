@@ -25,7 +25,7 @@ from plutus.research.factors import library as fl
 from plutus.research.model.walk_forward import build_dataset, walk_forward_predict
 
 from build_fundamentals import build_panels
-from crsp_study import _month_ends, _ticker_panel_to_permno
+from plutus.research.backtest.metrics import month_ends
 
 
 def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: float = 50.0) -> dict:
@@ -40,8 +40,8 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
     members_asof = lambda d: {str(p) for p in _m(d)}
 
     funds = build_panels(sorted(set(permno_to_ticker.values())), dates)
-    ni = _ticker_panel_to_permno(funds["net_income_ttm"], permno_to_ticker).reindex(index=dates, columns=adj.columns)
-    book = _ticker_panel_to_permno(funds["book_equity"], permno_to_ticker).reindex(index=dates, columns=adj.columns)
+    ni = crsp.ticker_panel_to_permno(funds["net_income_ttm"], permno_to_ticker).reindex(index=dates, columns=adj.columns)
+    book = crsp.ticker_panel_to_permno(funds["book_equity"], permno_to_ticker).reindex(index=dates, columns=adj.columns)
     cap = cap.reindex(index=dates, columns=adj.columns)
 
     factors = {
@@ -52,7 +52,7 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
         "momentum_12_1": fl.momentum(adj, 252, 21),
         "low_vol": fl.low_vol(adj, 252),
     }
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
     market = cap_weighted_index(adj, cap)
 
     candidate = fl.blend([fl.restrict_to_universe(factors["earnings_yield"], members_asof),

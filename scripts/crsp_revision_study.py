@@ -20,7 +20,7 @@ from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, RAW_DIR, ensure_dirs
 from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.eval.factor_eval import compute_ic
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 IBES_DIR = RAW_DIR / "ibes"
 
@@ -42,8 +42,8 @@ def run() -> dict:
     ensure_dirs()
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-    eval_dates = _month_ends(adj.index)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    eval_dates = month_ends(adj.index)
+    band = crsp.size_band_members_asof(cap)
 
     cusip2permno = _cusip_to_permno()
     actuals = ibes.load_actuals(IBES_DIR / "actuals_eps_us_unadj.csv.zip", periodicity="QTR")

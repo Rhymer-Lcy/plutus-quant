@@ -36,6 +36,7 @@ from plutus.data.sources import crsp_source as crsp
 from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.long_short import quantile_long_short
+from plutus.research.backtest.metrics import month_ends
 from plutus.research.backtest.portfolio import signal_portfolio_backtest
 from plutus.research.backtest.regime import cap_weighted_index
 from plutus.research.eval.factor_eval import compute_ic
@@ -44,11 +45,6 @@ from plutus.research.factors import library as fl
 
 N_HOLD = 50
 CAPITAL = 1_000_000.0
-
-
-def _month_ends(dates: pd.DatetimeIndex) -> list:
-    s = pd.Series(dates, index=dates)
-    return s.groupby(dates.to_period("M")).max().tolist()
 
 
 def _stats(equity: pd.Series, ppy: int = 252) -> dict:
@@ -71,14 +67,14 @@ def _load(universe: str):
         return adj, cap, members, 5.0, 50.0
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-    members = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    members = crsp.size_band_members_asof(cap)
     return adj, cap, members, 15.0, 300.0
 
 
 def run(universe: str) -> list[dict]:
     adj, cap, members, slip, borrow = _load(universe)
     cap = cap.reindex(index=adj.index, columns=adj.columns)
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     market = cap_weighted_index(adj, cap)
     bh = _stats(market.reindex(adj.index))
 
@@ -133,7 +129,7 @@ def deep_dive_liquid() -> None:
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet").reindex(index=adj.index, columns=adj.columns)
     dv = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_dollarvol.parquet").reindex(index=adj.index, columns=adj.columns)
     adv = dv.rolling(60, min_periods=20).mean()
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    band = crsp.size_band_members_asof(cap)
     netpay = fl.net_payout(cap, adj, 252)
 
     def liq_members(thr):

@@ -26,7 +26,7 @@ from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.backtest.regime import cap_weighted_index
 from plutus.research.factors import library as fl
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def run(quantile: float = 0.2, slippage_bps: float = 15.0, borrow_bps_annual: float = 300.0,
@@ -37,7 +37,7 @@ def run(quantile: float = 0.2, slippage_bps: float = 15.0, borrow_bps_annual: fl
     dates = adj.index
     members_asof = crsp.size_band_members_asof(cap, exclude_top=exclude_top, band_size=band_size)
     market = cap_weighted_index(adj, cap)
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
 
     mom = fl.momentum(adj, 252, 21)
     lvol = fl.low_vol(adj, 252)

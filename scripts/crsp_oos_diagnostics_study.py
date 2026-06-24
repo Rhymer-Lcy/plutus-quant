@@ -19,7 +19,7 @@ import pandas as pd
 
 from plutus.data.sources import crsp_source as crsp
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def main() -> int:
@@ -27,8 +27,8 @@ def main() -> int:
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     rev1 = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_rev1.parquet")   # RAW (pre-fillna)
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    eval_dates = month_ends(adj.index)
+    band = crsp.size_band_members_asof(cap)
 
     adj_m = adj.reindex(eval_dates)
     rev1_m = rev1.reindex(index=eval_dates, columns=adj.columns)

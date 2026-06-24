@@ -24,7 +24,7 @@ from plutus.research.backtest.regime import cap_weighted_index
 from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import events
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def build_sue_panel(permno_to_ticker: dict, dates, freshness_days: int) -> pd.DataFrame:
@@ -61,7 +61,7 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
     print(f"building SUE PEAD signal (freshness {freshness_days}d) from SEC filings…")
     sue = build_sue_panel(permno_to_ticker, dates, freshness_days)
     sue = sue.reindex(index=dates, columns=adj.columns)
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
     cover = sue.reindex(eval_dates).notna().sum(axis=1)
     print(f"  signal coverage: {int(cover.mean())} names/month with a fresh surprise "
           f"(of ~{adj.shape[1]} PERMNOs)")

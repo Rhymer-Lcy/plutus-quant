@@ -22,7 +22,7 @@ from scipy import stats
 from plutus.data.sources import crsp_source as crsp
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
 from plutus.research.eval.factor_eval import compute_ic
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 HOLDOUT = 2025
 
@@ -42,8 +42,8 @@ def main() -> int:
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    eval_dates = month_ends(adj.index)
+    band = crsp.size_band_members_asof(cap)
     ic = compute_ic(signal.reindex(eval_dates), adj, eval_dates, band).ic
 
     print("===== trailing-window IC decay (pooled monthly rank IC, two-sided t vs 0) =====")

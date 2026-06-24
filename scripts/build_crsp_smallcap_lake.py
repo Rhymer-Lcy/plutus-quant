@@ -51,7 +51,7 @@ def build(start: str, end: str, price_min: float, cap_min_000: float) -> None:
                       PARQUET_DIR / "crsp_smallcap_ticker_map.parquet")
     print(f"\nlake written: {adj.shape[0]} dates x {adj.shape[1]} common stocks")
     # how many names are in the mid/small band on a recent date?
-    mb = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    mb = crsp.size_band_members_asof(cap)
     print(f"  mid/small band (rank 501-3000 by cap) on {adj.index[-1].date()}: "
           f"{len(mb(adj.index[-1]))} names")
 

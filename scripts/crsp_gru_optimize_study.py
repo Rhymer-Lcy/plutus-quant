@@ -20,16 +20,16 @@ from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
 from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.backtest.optimize import turnover_aware_backtest
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def main() -> int:
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     signal = signal.reindex(eval_dates)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    band = crsp.size_band_members_asof(cap)
 
     costs = [("low 5/50", 5.0, 50.0), ("realistic 15/300", 15.0, 300.0)]
     print("Baseline: naive quintile (q0.10) long-short on the GRU signal")

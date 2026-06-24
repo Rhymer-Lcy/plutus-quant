@@ -62,7 +62,7 @@ def run(sue_threshold: float = 1.0, slippage_bps: float = 5.0, borrow_bps_annual
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     dates = adj.index
-    members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    members_asof = crsp.size_band_members_asof(cap)
     ret = adj.pct_change(fill_method=None)
 
     if EVENTS_PATH.exists() and not rebuild:

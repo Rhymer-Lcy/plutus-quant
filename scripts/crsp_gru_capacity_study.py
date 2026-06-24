@@ -18,7 +18,7 @@ from plutus.io import atomic_to_parquet
 from plutus.live.strategy import CAPITAL_TIERS, TIER_LABEL
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
 from plutus.research.backtest.optimize import turnover_aware_backtest
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def main() -> int:
@@ -26,9 +26,9 @@ def main() -> int:
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     dvol = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_dollarvol.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     signal = signal.reindex(eval_dates)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    band = crsp.size_band_members_asof(cap)
     adv = dvol.rolling(21, min_periods=5).mean().reindex(eval_dates)   # ADV ($) at each month-end
 
     aums = sorted({v for tier in CAPITAL_TIERS.values() for v in tier})

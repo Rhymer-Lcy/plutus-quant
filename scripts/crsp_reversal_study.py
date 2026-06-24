@@ -57,7 +57,7 @@ def _load(universe: str):
         return adj, cap, members, 5.0, 50.0
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-    members = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    members = crsp.size_band_members_asof(cap)
     return adj, cap, members, 15.0, 300.0
 
 

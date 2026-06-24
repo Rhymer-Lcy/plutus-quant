@@ -25,7 +25,7 @@ from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import alpha_features as af
 from plutus.research.model.walk_forward import DEFAULT_PARAMS, build_dataset
 
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def _make_model(model: str):
@@ -70,7 +70,7 @@ def _load(universe: str):
     if universe == "smallcap":
         adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
-        members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+        members_asof = crsp.size_band_members_asof(cap)
     else:  # large-cap S&P 500
         adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
@@ -84,7 +84,7 @@ def run(model: str = "lightgbm", universe: str = "smallcap", rebuild: bool = Fal
     ensure_dirs()
     adj, cap, members_asof = _load(universe)
     dates = adj.index
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
     print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} monthly eval dates")
 
     sig_path = BACKTESTS_DIR / f"crsp_mlzoo_{universe}_{model}_signal.parquet"

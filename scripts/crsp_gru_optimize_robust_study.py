@@ -9,16 +9,16 @@ import pandas as pd
 from plutus.data.sources import crsp_source as crsp
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR
 from plutus.research.backtest.optimize import turnover_aware_backtest
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 
 def main() -> int:
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     signal = pd.read_parquet(BACKTESTS_DIR / "crsp_dl_smallcap_gru_signal.parquet")
-    eval_dates = _month_ends(adj.index)
+    eval_dates = month_ends(adj.index)
     signal = signal.reindex(eval_dates)
-    band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
+    band = crsp.size_band_members_asof(cap)
 
     print("Realistic cost (15bps slip + 300bps borrow) — name_cap x gamma robustness:")
     print(f"{'name_cap':>9s} {'gamma':>6s} {'annRet':>8s} {'Sharpe':>7s} {'turn':>6s} {'gross':>6s} {'~names':>7s}")

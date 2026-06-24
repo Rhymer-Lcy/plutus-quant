@@ -24,7 +24,7 @@ from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.event_study import event_caar, event_time_portfolio
 from plutus.research.factors import events as ev
 from plutus.research.eval.factor_eval import compute_ic  # noqa: F401  (kept for parity/ad-hoc use)
-from crsp_study import _month_ends
+from plutus.research.backtest.metrics import month_ends
 
 EVENTS_PATH = PARQUET_DIR / "crsp_smallcap_pead_events.parquet"
 
@@ -70,8 +70,8 @@ def run(sue_threshold: float = 1.5, slippage_bps: float = 20.0, borrow_bps_annua
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
     tmap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_ticker_map.parquet")
     dates = adj.index
-    members_asof = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
-    eval_dates = _month_ends(dates)
+    members_asof = crsp.size_band_members_asof(cap)
+    eval_dates = month_ends(dates)
     ret = adj.pct_change(fill_method=None)
 
     if EVENTS_PATH.exists() and not rebuild:

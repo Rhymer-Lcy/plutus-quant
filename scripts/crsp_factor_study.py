@@ -23,16 +23,12 @@ from plutus.data import universe as uni
 from plutus.io import atomic_to_parquet, atomic_write_text
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.frictions import USEquityCosts
+from plutus.research.backtest.metrics import month_ends
 from plutus.research.backtest.portfolio import signal_portfolio_backtest
 from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import library as fl
 
 from build_fundamentals import build_panels
-
-
-def _month_ends(dates: pd.DatetimeIndex) -> list:
-    s = pd.Series(dates, index=dates)
-    return s.groupby(dates.to_period("M")).max().tolist()
 
 
 def run(capital: float = 100_000.0, n_hold: int = 20) -> dict:
@@ -59,7 +55,7 @@ def run(capital: float = 100_000.0, n_hold: int = 20) -> dict:
         "momentum_12_1": fl.momentum(adj, 252, 21),
         "low_vol": fl.low_vol(adj, 252),
     }
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
     print(f"\n{len(eval_dates)} monthly eval dates over the PIT S&P 500 universe\n")
     print(f"{'factor':16s} {'mean IC':>9s} {'IC-IR':>7s} {'t-stat':>7s} {'hit':>6s} {'n':>4s}")
     ic_rows = []

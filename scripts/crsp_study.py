@@ -27,23 +27,12 @@ from plutus.data.sources import crsp_source as crsp
 from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.frictions import USEquityCosts
+from plutus.research.backtest.metrics import month_ends
 from plutus.research.backtest.portfolio import signal_portfolio_backtest
 from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.factors import library as fl
 
 from build_fundamentals import build_panels
-
-
-def _month_ends(dates: pd.DatetimeIndex) -> list:
-    s = pd.Series(dates, index=dates)
-    return s.groupby(dates.to_period("M")).max().tolist()
-
-
-def _ticker_panel_to_permno(panel_tkr: pd.DataFrame, permno_to_ticker: dict) -> pd.DataFrame:
-    """Re-key a ticker-columned panel to PERMNO columns via the PERMNO->ticker map."""
-    cols = {permno: panel_tkr[tkr] for permno, tkr in permno_to_ticker.items()
-            if tkr in panel_tkr.columns}
-    return pd.DataFrame(cols)
 
 
 def run(capital: float = 100_000.0, n_hold: int = 20,
@@ -72,8 +61,8 @@ def run(capital: float = 100_000.0, n_hold: int = 20,
     tickers = sorted(set(permno_to_ticker.values()))
     funds = build_panels(tickers, dates)
     ni_t, book_t = funds["net_income_ttm"], funds["book_equity"]
-    ni = _ticker_panel_to_permno(ni_t, permno_to_ticker).reindex(index=dates, columns=adj.columns)
-    book = _ticker_panel_to_permno(book_t, permno_to_ticker).reindex(index=dates, columns=adj.columns)
+    ni = crsp.ticker_panel_to_permno(ni_t, permno_to_ticker).reindex(index=dates, columns=adj.columns)
+    book = crsp.ticker_panel_to_permno(book_t, permno_to_ticker).reindex(index=dates, columns=adj.columns)
     cap = cap.reindex(index=dates, columns=adj.columns)
     print(f"  fundamentals coverage: net_income {int(ni.notna().any().sum())}, "
           f"book {int(book.notna().any().sum())} / {adj.shape[1]} PERMNOs "
@@ -86,7 +75,7 @@ def run(capital: float = 100_000.0, n_hold: int = 20,
         "momentum_12_1": fl.momentum(adj, 252, 21),
         "low_vol": fl.low_vol(adj, 252),
     }
-    eval_dates = _month_ends(dates)
+    eval_dates = month_ends(dates)
     print(f"\n{len(eval_dates)} monthly eval dates\n")
     print(f"{'factor':16s} {'mean IC':>9s} {'IC-IR':>7s} {'t-stat':>7s} {'hit':>6s} {'n':>4s}")
     rows = []
