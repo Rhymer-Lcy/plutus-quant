@@ -1,6 +1,6 @@
 # Small-cap PEAD — the first real gross edge, gated by cost
 
-> ⚠ **RETRACTED / CORRECTED (see docs/ibes_pead_study.md).** The headline result below
+> **RETRACTED / CORRECTED (see docs/ibes_pead_study.md).** The headline result below
 > (+10.3%/yr, Sharpe 0.41 at low cost) was a **look-ahead artifact**: with close-to-close
 > returns, entering the day after the announcement captured the post-close overnight GAP (the
 > announcement jump), not tradeable drift. Fixed with `entry_offset=1` (skip the reaction day).

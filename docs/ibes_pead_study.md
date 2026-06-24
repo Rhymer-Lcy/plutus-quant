@@ -50,7 +50,7 @@ program is consistent and honest:
 | Small-cap, seasonal SUE | +0.60% | hold-10 −5.2% (Sh −0.25); all neg | no |
 | **Small-cap, analyst (IBES)** | **+0.93%** | hold-60 +0.8% (Sh 0.14); rest neg | no |
 
-> ⚠ This RETRACTS the earlier "first real gross edge (small-cap PEAD, Sharpe 0.41)" in
+> This RETRACTS the earlier "first real gross edge (small-cap PEAD, Sharpe 0.41)" in
 > docs/smallcap_pead_study.md and the "Sharpe 0.07" in docs/pead_event_study.md — both were the
 > announcement-gap artifact. De-leaked, neither is tradeable.
 

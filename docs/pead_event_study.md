@@ -1,6 +1,6 @@
 # Event-time PEAD — the drift is real, and it sits exactly on the cost boundary
 
-> ⚠ **CORRECTED (see docs/ibes_pead_study.md).** The long-short numbers below used
+> **CORRECTED (see docs/ibes_pead_study.md).** The long-short numbers below used
 > `entry_offset=0`, which captured the announcement-day overnight GAP (a look-ahead artifact),
 > flattering them. The "+1.43%/Sharpe 0.07" (|SUE|≥1.5, hold-10) was the gap; de-leaked
 > (`entry_offset=1`) it is **−1.1%/yr (Sharpe −0.06), negative at every horizon**. The CAAR is
