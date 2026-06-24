@@ -197,12 +197,17 @@ def _score_backtest(price: pd.DataFrame, scores: pd.DataFrame, capital: float,
                     n_hold: int, costs: USEquityCosts | None, members_asof,
                     exposure_asof=None, weight_asof=None, rebalance_band: int = 0,
                     collect_trades: bool = False, halt_block: pd.DataFrame | None = None,
-                    rebalance_freq: str = "M") -> PortfolioResult:
+                    rebalance_freq: str = "M", initial_rebalance: bool = False) -> PortfolioResult:
     """Engine: each period hold the top-`n_hold` names by `scores` (read at the period-end
     signal date, executed next trading day), with US frictions. Weighting is equal by
     default; `weight_asof` supplies an alternative intra-basket weighting (e.g. inverse-vol)
     WITHOUT changing the gross-invested fraction, so a weighting scheme is compared to equal
-    weight on like terms. `rebalance_band` adds a turnover buffer (see _select_top)."""
+    weight on like terms. `rebalance_band` adds a turnover buffer (see _select_top).
+
+    `initial_rebalance` invests the seed on the FIRST bar using the signal known AT that bar
+    (signal date == exec date, the inception seeding convention), instead of waiting for the
+    first period-end. Default off keeps the research backtest and parity tests on the natural
+    period-end schedule; the paper ledger (live.paper) turns it on to seed at inception."""
     costs = costs or USEquityCosts()
     lot = costs.lot_size
     slip = costs.slip
@@ -216,6 +221,8 @@ def _score_backtest(price: pd.DataFrame, scores: pd.DataFrame, capital: float,
     pos_of = {d: i for i, d in enumerate(dates)}
     period_end = pd.Series(dates, index=dates).groupby(periods).max().tolist()
     rebal_exec = {pos_of[sig] + 1: pos_of[sig] for sig in period_end if pos_of[sig] + 1 < n}
+    if initial_rebalance and n > 0:
+        rebal_exec.setdefault(0, 0)                    # seed the book on the first bar (inception)
 
     cash = float(capital)
     positions: dict[str, int] = {}
@@ -304,7 +311,8 @@ def signal_portfolio_backtest(price: pd.DataFrame, signal: pd.DataFrame, capital
                               members_asof=None, exposure_asof=None,
                               weight_asof=None, rebalance_band: int = 0,
                               collect_trades: bool = False, halt_block: pd.DataFrame | None = None,
-                              rebalance_freq: str = "M") -> PortfolioResult:
+                              rebalance_freq: str = "M",
+                              initial_rebalance: bool = False) -> PortfolioResult:
     """Top-N by an external `signal` panel (date x ticker), e.g. walk-forward ML
     out-of-sample predictions. `price` is the (split/dividend-)adjusted close panel for
     exec/valuation. `exposure_asof`: optional callable(signal_date)->float in [0,1] scaling
@@ -313,7 +321,8 @@ def signal_portfolio_backtest(price: pd.DataFrame, signal: pd.DataFrame, capital
     omitted. `rebalance_band`: turnover buffer (keep incumbents within top n_hold+band); 0 =
     off. `collect_trades`: also return the per-fill audit log (consumed by live.paper).
     `halt_block`: optional (date x ticker) boolean panel; blocks trading a halted name on the
-    exec day. OFF (None) by default."""
+    exec day. OFF (None) by default. `initial_rebalance`: invest the seed on the first bar
+    (paper inception); OFF by default (research/parity stay on the period-end schedule)."""
     return _score_backtest(price, signal, capital, n_hold, costs, members_asof,
                            exposure_asof, weight_asof, rebalance_band, collect_trades, halt_block,
-                           rebalance_freq)
+                           rebalance_freq, initial_rebalance)
