@@ -4,6 +4,7 @@ awaiting-data vs active paths. The plain fold_day mechanics are covered in test_
 import numpy as np
 import pandas as pd
 
+from plutus.live.forward import frozen_book_forward
 from plutus.live.paper import ledger_equity, paper_account, replay
 from plutus.live.strategy import (DEPLOYED, DeployedStrategy, deployed_members,
                                   deployed_signal)
@@ -109,3 +110,21 @@ def test_paper_account_active_seeds_at_inception_and_benchmarks():
     # ledger equity must still equal the engine equity on the forward window (parity holds here too).
     led = ledger_equity(ledger).reindex(res.equity.index)
     assert float(np.abs(led.values - res.equity.values).max()) < 1e-6
+
+
+def test_frozen_book_forward_buy_and_hold():
+    # Free-data early read core: equal-dollar buy-and-hold. With 0 slippage equity[0] == seed; a
+    # name that doubles while the other is flat lifts the 50/50 book to 1.5x. A NaN-entry column
+    # is dropped (could not be bought at inception).
+    dates = pd.bdate_range("2026-01-02", periods=4)
+    fp = pd.DataFrame({"X": [100.0, 120.0, 200.0, 200.0],
+                       "Y": [50.0, 50.0, 50.0, 50.0],
+                       "Z": [float("nan"), 10.0, 10.0, 10.0]}, index=dates)
+    eq, valid = frozen_book_forward(fp, 1_000_000.0, slippage_bps=0.0)
+    assert valid == ["X", "Y"]                       # Z dropped (no inception price)
+    assert abs(eq.iloc[0] - 1_000_000.0) < 1e-6      # no slippage -> seeded at par
+    assert abs(eq.iloc[-1] - 1_500_000.0) < 1e-6     # X doubled (+500k), Y flat
+
+    # slippage drags equity[0] below the seed (one-time entry cost).
+    eq2, _ = frozen_book_forward(fp, 1_000_000.0, slippage_bps=50.0)
+    assert eq2.iloc[0] < 1_000_000.0

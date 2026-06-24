@@ -88,6 +88,36 @@ A machinery smoke test on the in-sample 2025 window (NOT the forward record) con
 path reproduces the studied edge on real data: +45.4% vs B&H +18.3%, Sharpe 1.81 vs 0.99 — i.e. the
 live code yields the same strong-recent-years result the study found.
 
+## Free-data early read — start now, before the next CRSP pull (`live.forward`)
+
+Because the CRSP path is `awaiting_data`, `live.forward` gives an immediate, lower-rigor forward
+read from FREE data, without waiting for a paid pull. The split keeps it honest: the book is
+**selected from clean CRSP** at the last lake bar (survivorship-clean decision, validated signal +
+universe), then **priced forward with yfinance** adjusted closes and benchmarked against small-cap
+ETFs (VB, which tracks the CRSP US Small Cap index; IWM, Russell 2000). It tests the *selection*
+(do the picked names beat the index OOS), not the monthly rebalance — net-payout is low-turnover, so
+a held book approximates the strategy between CRSP refreshes.
+
+Coverage is good: of the 50-name 2025-12-31 book, **47 (94%)** have full free 2026 data; 3 are
+unresolved tickers (changes/acquisitions) and excluded. Run: `python scripts/paper_forward.py`.
+
+**First read (2026-01-02 .. 2026-06-23, 118 bars, seed $1M) — a caution flag, not a verdict:**
+
+| book | total return | maxDD | Sharpe |
+|---|--:|--:|--:|
+| net-payout top-50 (held) | +4.6% | −16.5% | 0.55 |
+| benchmark VB (CRSP small-cap) | +13.2% | | 1.60 |
+| benchmark IWM (Russell 2000) | +19.2% | | 1.93 |
+
+The book **lagged** the small-cap index by 9-15 points over the first ~6 OOS months — the opposite
+of the in-sample story (where it beat the B&H bar). Read this with heavy caveats: (1) the sample is
+thin (~6 months — the Sharpe is noise-dominated, read direction not magnitude); (2) it is
+selection-only (no forward rebalance); (3) early 2026 was a sharp small-cap beta rally that a value-
+tilted net-payout book would be expected to trail; (4) 3/50 names excluded, bias direction unknown.
+It is **not** the definitive test, but it is the first real out-of-sample evidence, and it does not
+corroborate the in-sample edge. The monthly-rebalanced CRSP ledger (`paper_live.py`), run when a
+fresh CRSP pull lands, remains the decisive gate.
+
 ## Honest caveats (carried from docs/issuance_study.md, plus the feed constraint)
 
 - **Magnitude is above the literature** (~0.5-0.8 published issuance Sharpe). The forward record is
