@@ -98,25 +98,37 @@ ETFs (VB, which tracks the CRSP US Small Cap index; IWM, Russell 2000). It tests
 (do the picked names beat the index OOS), not the monthly rebalance — net-payout is low-turnover, so
 a held book approximates the strategy between CRSP refreshes.
 
-Coverage is good: of the 50-name 2025-12-31 book, **47 (94%)** have full free 2026 data; 3 are
-unresolved tickers (changes/acquisitions) and excluded. Run: `python scripts/paper_forward.py`.
+Coverage is **complete**: of the 50-name 2025-12-31 book, 47 have direct free 2026 data and the
+other 3 are handled by a curated, primary-sourced corporate-action resolver (`CORPORATE_ACTIONS` in
+`live.forward`) — none is silently dropped (dropping would renormalize weight onto the survivors, a
+survivorship-y bias):
 
-**First read (2026-01-02 .. 2026-06-23, 118 bars, seed $1M) — a caution flag, not a verdict:**
+| name | 2026 corporate action (primary-sourced) | forward treatment |
+|---|---|--:|
+| CommScope **COMM** | sold CCS unit to Amphenol; renamed Vistance Networks, **→ VISN**; $10/sh special dividend | priced as VISN (incl. the dividend) |
+| Denny's **DENN** | taken private by a TriArtisan consortium, **$6.25 cash/share** | realized at the cash deal → flat |
+| First Foundation **FFWM** | all-stock merger into FirstSun, **→ FSUN** (0.16083) | priced as FSUN |
+
+Run: `python scripts/paper_forward.py`.
+
+**First read (2026-01-02 .. 2026-06-23, 118 bars, 50/50 priced, seed $1M) — a caution flag, not a
+verdict:**
 
 | book | total return | maxDD | Sharpe |
 |---|--:|--:|--:|
-| net-payout top-50 (held) | +4.6% | −16.5% | 0.55 |
+| net-payout top-50 (held) | +5.0% | −15.8% | 0.60 |
 | benchmark VB (CRSP small-cap) | +13.2% | | 1.60 |
 | benchmark IWM (Russell 2000) | +19.2% | | 1.93 |
 
-The book **lagged** the small-cap index by 9-15 points over the first ~6 OOS months — the opposite
+The book **lagged** the small-cap index by 8-14 points over the first ~6 OOS months — the opposite
 of the in-sample story (where it beat the B&H bar). Read this with heavy caveats: (1) the sample is
 thin (~6 months — the Sharpe is noise-dominated, read direction not magnitude); (2) it is
 selection-only (no forward rebalance); (3) early 2026 was a sharp small-cap beta rally that a value-
-tilted net-payout book would be expected to trail; (4) 3/50 names excluded, bias direction unknown.
-It is **not** the definitive test, but it is the first real out-of-sample evidence, and it does not
-corroborate the in-sample edge. The monthly-rebalanced CRSP ledger (`paper_live.py`), run when a
-fresh CRSP pull lands, remains the decisive gate.
+tilted net-payout book would be expected to trail; (4) VISN's +40% reflects the $10 special dividend
+on the standard reinvested-total-return basis (consistent with the study's CRSP convention), which
+slightly flatters one 2%-weight name. It is **not** the definitive test, but it is the first real
+out-of-sample evidence, and it does not corroborate the in-sample edge. The monthly-rebalanced CRSP
+ledger (`paper_live.py`), run when a fresh CRSP pull lands, remains the decisive gate.
 
 ## Honest caveats (carried from docs/issuance_study.md, plus the feed constraint)
 

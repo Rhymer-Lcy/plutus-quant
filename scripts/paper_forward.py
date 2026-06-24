@@ -33,7 +33,11 @@ def main() -> int:
     print(f"  selection @ {r['selection_asof']} (CRSP)  ->  forward {r['inception']}..{r['as_of']} "
           f"({r['n_bars']} bars, yfinance)")
     print(f"  book: {r['n_priced']}/{r['n_book']} priced "
-          f"({r['n_mapped']} mapped; unresolved {r['unresolved_tickers']})")
+          f"({r['n_mapped']} mapped; {r['n_corporate_actions']} corporate-action resolutions; "
+          f"unresolved {r['unresolved_tickers']})")
+    acts = {t: v for t, v in r["resolution"].items() if v not in ("direct", "unresolved")}
+    for t, v in sorted(acts.items()):
+        print(f"      {t:6s} -> {v}")
     sh = "n/a" if r["ann_sharpe"] is None else f"{r['ann_sharpe']:.2f}"
     print(f"\n  {'book':<22} totRet {r['total_return']:>+7.1%}   maxDD {r['max_drawdown']:>+7.1%}   "
           f"Sharpe {sh:>6}")

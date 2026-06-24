@@ -36,6 +36,27 @@ from .strategy import (DEPLOYED, PAPER_INCEPTION, DeployedStrategy, deployed_mem
 TICKER_MAP_FILE = "crsp_smallcap_ticker_map.parquet"
 BENCHMARKS = ["VB", "IWM"]   # VB tracks the CRSP US Small Cap index (apt); IWM = Russell 2000 (context)
 
+# Curated 2026 corporate-action resolutions for book names whose 2025-12-31 CRSP ticker no longer
+# resolves on yfinance. Each was verified against primary sources (see docs/paper_trading.md); a
+# frozen equal-DOLLAR holding's forward return depends only on its forward PRICE PATH, so a
+# share-exchange ratio cancels and is noted only for documentation.
+#   ("ticker", SUCCESSOR): the holding CONTINUES -> price it forward via SUCCESSOR's adjusted close
+#                          (Yahoo migrates the full total-return history to the surviving symbol).
+#   ("cash",):             a CASH acquisition near the deal price -> the holding becomes cash,
+#                          carried flat for the rest of the window (a < ~1% approximation: the
+#                          stock was already pinned at the deal price before close).
+CORPORATE_ACTIONS = {
+    # CommScope sold its CCS unit to Amphenol ($10.5B, closed 2026-01-12), renamed Vistance Networks
+    # (COMM -> VISN, 2026-01-14, 1:1) and paid a special dividend >= $10/sh -- VISN's adjusted close
+    # carries that total return, so dropping COMM understated the book.
+    "COMM": ("ticker", "VISN"),
+    # First Foundation merged into FirstSun (all-stock, 0.16083 FSUN/FFWM, effective 2026-04-01); a
+    # fixed-ratio all-stock holding's return tracks the acquirer FSUN.
+    "FFWM": ("ticker", "FSUN"),
+    # Denny's taken private by a TriArtisan-led consortium for $6.25 cash/share (closed 2026-01-16).
+    "DENN": ("cash",),
+}
+
 
 def inception_book(adj: pd.DataFrame, cap: pd.DataFrame, dollar_volume: pd.DataFrame,
                    spec: DeployedStrategy = DEPLOYED, asof=None) -> list[str]:
@@ -84,14 +105,43 @@ def frozen_book_forward(forward_prices: pd.DataFrame, seed_cash: float,
     return equity, valid
 
 
+def assemble_forward_prices(book_tickers: list[str], prices: pd.DataFrame,
+                            succ_prices: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Combine the directly-priced names (`prices`) with corporate-action resolutions: a continuing
+    holding uses its successor's price path (from `succ_prices`, e.g. VISN/FSUN); a cash acquisition
+    becomes a flat series (carried at the deal value). Returns (full_panel, resolution_log), where
+    the log maps each book ticker to how it was priced: 'direct', 'successor:<SYM>', 'cash', or
+    'unresolved'. Pure (no I/O) so it is unit-tested offline."""
+    idx = prices.index
+    out: dict[str, pd.Series] = {}
+    log: dict[str, str] = {}
+    for t in book_tickers:
+        if t in prices.columns:
+            out[t] = prices[t]
+            log[t] = "direct"
+            continue
+        act = CORPORATE_ACTIONS.get(t)
+        if act and act[0] == "ticker" and act[1] in succ_prices.columns:
+            out[t] = succ_prices[act[1]].reindex(idx).ffill().bfill()
+            log[t] = f"successor:{act[1]}"
+        elif act and act[0] == "cash":
+            out[t] = pd.Series(1.0, index=idx)         # held at the deal value -> cash -> flat
+            log[t] = "cash"
+        else:
+            log[t] = "unresolved"
+    return pd.DataFrame(out), log
+
+
 def run_forward(seed_cash: float = 1_000_000.0, *, spec: DeployedStrategy = DEPLOYED,
                 inception: str = PAPER_INCEPTION, end: str | None = None,
                 persist: bool = True, panels=None, prices: pd.DataFrame | None = None,
+                succ_prices: pd.DataFrame | None = None,
                 bench_prices: pd.DataFrame | None = None) -> dict:
     """Select the book from CRSP, price it forward with free data from `inception` to `end`
-    (default: today), and benchmark vs small-cap ETFs. Pass `prices`/`bench_prices` to inject
-    panels (tests / offline); otherwise they are pulled from yfinance. Persists a report + curve
-    under PAPER_DIR. Returns the report."""
+    (default: today) -- resolving 2026 corporate actions (ticker changes / mergers) so no held name
+    is silently dropped -- and benchmark vs small-cap ETFs. Pass `prices`/`succ_prices`/`bench_prices`
+    to inject panels (tests / offline); otherwise they are pulled from yfinance. Persists a report +
+    curve under PAPER_DIR. Returns the report."""
     adj, cap, dv = panels if panels is not None else load_panels()
     select_asof = adj.index[-1]
     permnos = inception_book(adj, cap, dv, spec, select_asof)
@@ -100,13 +150,21 @@ def run_forward(seed_cash: float = 1_000_000.0, *, spec: DeployedStrategy = DEPL
     tickers = [t for _, t in pairs]
     end = end or date.today().strftime("%Y-%m-%d")
 
-    if prices is None or bench_prices is None:
+    if prices is None or succ_prices is None or bench_prices is None:
         from ..data.sources import yfinance_source as yfs
-        prices = yfs.adjusted_close_panel(tickers, inception, end) if prices is None else prices
-        bench_prices = (yfs.adjusted_close_panel(BENCHMARKS, inception, end)
-                        if bench_prices is None else bench_prices)
+        if prices is None:
+            prices = yfs.adjusted_close_panel(tickers, inception, end)
+        if succ_prices is None:
+            missing = [t for t in tickers if t not in prices.columns]
+            succ_syms = sorted({CORPORATE_ACTIONS[t][1] for t in missing
+                                if CORPORATE_ACTIONS.get(t, (None,))[0] == "ticker"})
+            succ_prices = (yfs.adjusted_close_panel(succ_syms, inception, end)
+                           if succ_syms else pd.DataFrame(index=prices.index))
+        if bench_prices is None:
+            bench_prices = yfs.adjusted_close_panel(BENCHMARKS, inception, end)
 
-    equity, valid = frozen_book_forward(prices, seed_cash, slippage_bps=spec.slippage_bps)
+    full, resolution = assemble_forward_prices(tickers, prices, succ_prices)
+    equity, valid = frozen_book_forward(full, seed_cash, slippage_bps=spec.slippage_bps)
     eq = equity.dropna()
     benches = {}
     for b in BENCHMARKS:
@@ -128,7 +186,9 @@ def run_forward(seed_cash: float = 1_000_000.0, *, spec: DeployedStrategy = DEPL
         "n_book": len(permnos),
         "n_mapped": len(tickers),
         "n_priced": len(valid),
-        "unresolved_tickers": sorted(set(tickers) - set(valid)),
+        "resolution": resolution,
+        "n_corporate_actions": sum(1 for v in resolution.values() if v != "direct" and v != "unresolved"),
+        "unresolved_tickers": sorted(t for t, v in resolution.items() if v == "unresolved"),
         "n_bars": int(len(eq)),
         "equity": float(eq.iloc[-1]),
         "total_return": float(eq.iloc[-1] / seed_cash - 1.0),

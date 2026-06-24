@@ -4,7 +4,7 @@ awaiting-data vs active paths. The plain fold_day mechanics are covered in test_
 import numpy as np
 import pandas as pd
 
-from plutus.live.forward import frozen_book_forward
+from plutus.live.forward import assemble_forward_prices, frozen_book_forward
 from plutus.live.paper import ledger_equity, paper_account, replay
 from plutus.live.strategy import (DEPLOYED, DeployedStrategy, deployed_members,
                                   deployed_signal)
@@ -128,3 +128,18 @@ def test_frozen_book_forward_buy_and_hold():
     # slippage drags equity[0] below the seed (one-time entry cost).
     eq2, _ = frozen_book_forward(fp, 1_000_000.0, slippage_bps=50.0)
     assert eq2.iloc[0] < 1_000_000.0
+
+
+def test_assemble_forward_prices_resolves_corporate_actions():
+    # A held name yfinance no longer resolves under its 2025-12-31 ticker must be priced via its
+    # successor (ticker change / all-stock merger) or carried flat (cash deal) -- never silently
+    # dropped, which would renormalize weights onto the survivors (a survivorship-y bias).
+    idx = pd.bdate_range("2026-01-02", periods=3)
+    prices = pd.DataFrame({"AAA": [10.0, 11.0, 12.0]}, index=idx)
+    succ = pd.DataFrame({"VISN": [8.0, 9.0, 10.0], "FSUN": [37.0, 37.0, 36.0]}, index=idx)
+    full, log = assemble_forward_prices(["AAA", "COMM", "FFWM", "DENN", "ZZZ"], prices, succ)
+    assert log["AAA"] == "direct"
+    assert log["COMM"] == "successor:VISN" and list(full["COMM"]) == [8.0, 9.0, 10.0]
+    assert log["FFWM"] == "successor:FSUN"
+    assert log["DENN"] == "cash" and bool((full["DENN"] == 1.0).all())   # flat -> 0% contribution
+    assert log["ZZZ"] == "unresolved" and "ZZZ" not in full.columns
