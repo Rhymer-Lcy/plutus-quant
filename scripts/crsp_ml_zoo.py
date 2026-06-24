@@ -29,7 +29,8 @@ from crsp_study import _month_ends
 
 
 def _make_model(model: str):
-    """Model factory (sklearn-like regressors). Tree models handle NaN/scale natively."""
+    """Tree-regressor factory (scikit-learn-style). Tree models handle missing values and
+    scale invariance without explicit preprocessing."""
     if model == "lightgbm":
         from lightgbm import LGBMRegressor
         return LGBMRegressor(**DEFAULT_PARAMS)

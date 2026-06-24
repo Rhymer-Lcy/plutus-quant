@@ -41,9 +41,13 @@ model, data adapters, universe, and execution are all market-specific.
 > latent leak had been flattering *all* earlier event-time PEAD numbers — including a now-retracted
 > "first real edge (Sharpe 0.41)". De-leaked, every PEAD long-short is negative net of costs
 > (best ≈ Sharpe 0.14 at idealized cost). The tradeable post-announcement drift (~0.6–0.9%/60d)
-> is smaller than the cost of harvesting it. **Net of the whole program: no validated tradeable
-> edge in US equities at retail cost** — the durable asset is the survivorship-free + cost-aware
-> + look-ahead-audited platform. `live/strategy.py` is a prior, not a recommendation.
+> is smaller than the cost of harvesting it. **One exception was later found**: a net-payout /
+> buyback strategy in liquid mid/small-cap stocks clears the buy-and-hold bar in-sample (Sharpe
+> 1.14, 2005–2025; see `docs/issuance_study.md`) and is now paper-traded forward out-of-sample
+> (`docs/paper_trading.md`) — though its first ~6-month out-of-sample read lags the small-cap
+> index, so it is **on watch, not yet validated**. The durable asset remains the survivorship-free
+> + cost-aware + look-ahead-audited platform. `live/strategy.py` is the deployed net-payout spec,
+> frozen pending the forward verdict.
 
 ## Architecture
 
