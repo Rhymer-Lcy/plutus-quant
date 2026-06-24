@@ -51,14 +51,6 @@ def _month_ends(dates: pd.DatetimeIndex) -> list:
     return s.groupby(dates.to_period("M")).max().tolist()
 
 
-def _issuance(mktcap: pd.DataFrame, adj: pd.DataFrame, H: int) -> pd.DataFrame:
-    """-(log market-cap growth - log total return) over H trading days. Higher = net payout."""
-    lc = np.log(mktcap.where(mktcap > 0))
-    la = np.log(adj.where(adj > 0))
-    iss = (lc - lc.shift(H)) - (la - la.shift(H))
-    return -iss
-
-
 def _stats(equity: pd.Series, ppy: int = 252) -> dict:
     eq = equity.dropna()
     r = eq.pct_change().dropna()
@@ -102,7 +94,7 @@ def run(universe: str) -> list[dict]:
     rows = []
     ls_keep = {}
     for H in (252, 1260):
-        fac = _issuance(cap, adj, H)
+        fac = fl.net_payout(cap, adj, H)
         ic = compute_ic(fac, adj, eval_dates, members)
         ls = quantile_long_short(adj, fac, eval_dates, members, quantile=0.2,
                                  slippage_bps=slip, borrow_bps_annual=borrow, market_index=market)
@@ -142,7 +134,7 @@ def deep_dive_liquid() -> None:
     dv = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_dollarvol.parquet").reindex(index=adj.index, columns=adj.columns)
     adv = dv.rolling(60, min_periods=20).mean()
     band = crsp.size_band_members_asof(cap, exclude_top=500, band_size=2500)
-    netpay = _issuance(cap, adj, 252)
+    netpay = fl.net_payout(cap, adj, 252)
 
     def liq_members(thr):
         def f(d):

@@ -108,6 +108,32 @@ def low_vol(close: pd.DataFrame, window: int = 252) -> pd.DataFrame:
     return -close.pct_change(fill_method=None).rolling(window).std()
 
 
+def net_payout(market_cap: pd.DataFrame, adj_close: pd.DataFrame,
+               lookback: int = 252) -> pd.DataFrame:
+    """Net-payout / net-issuance factor (higher = more attractive), survivorship-free and
+    buildable from CRSP price+cap ALONE (no SEC ticker-join, so no delisted-name drop).
+
+        issuance(H) = log(market_cap_t / market_cap_{t-H}) - log(adj_close_t / adj_close_{t-H})
+        factor      = -issuance
+
+    `market_cap` is split-invariant (price * shares); `adj_close` is the TOTAL return. Their
+    difference is the growth in market cap NOT explained by total return = net equity raised.
+    Price-measurement error enters BOTH terms (cap and adj are each price-proportional) and
+    cancels, so the signal reduces to clean split-adjusted share change. Because `adj_close`
+    is the TOTAL return, this is the NET-PAYOUT form (net issuance minus buybacks AND
+    dividends) -- a documented predictor (Boudoukh et al. net payout; Daniel-Titman composite
+    issuance). Higher factor = net distributor / buyback firm = attractive; net issuer = not.
+
+    SINGLE SOURCE OF TRUTH: both the research study (scripts/crsp_issuance_study.py) and the
+    deployed paper strategy (live.strategy.deployed_signal) import THIS function, so the served
+    signal cannot drift from the researched one (train/serve skew is the dominant alpha-killer).
+    H = 252 (1y, the simple net-issuance horizon); 1260 (5y) ~ the Daniel-Titman composite."""
+    lc = np.log(market_cap.where(market_cap > 0))
+    la = np.log(adj_close.where(adj_close > 0))
+    iss = (lc - lc.shift(lookback)) - (la - la.shift(lookback))
+    return -iss
+
+
 # --- fundamental factors (higher = more attractive) ---
 # Inputs are wide daily panels already aligned to FILING dates (point-in-time). Build them
 # from SEC EDGAR company facts (plutus.data.sources.sec_edgar) joined to market cap.
