@@ -28,7 +28,14 @@ def main() -> int:
     d = DEPLOYED
     print(f"deployed = net-payout({d.lookback}d) top-{d.n_hold}, band & ADV>${d.adv_min / 1e6:.0f}M/d")
     print("mode: FREE-DATA early read (CRSP selects, yfinance prices forward) -- selection-only, thin sample\n")
-    r = run_forward(args.seed, inception=args.inception, end=args.end)
+    try:
+        r = run_forward(args.seed, inception=args.inception, end=args.end)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        print("\n[transient] run failed (most likely a yfinance/network issue). Exiting 75 so the "
+              "scheduler retries; the recompute is idempotent (no state is lost).")
+        return 75
 
     print(f"  selection @ {r['selection_asof']} (CRSP)  ->  forward {r['inception']}..{r['as_of']} "
           f"({r['n_bars']} bars, yfinance)")
