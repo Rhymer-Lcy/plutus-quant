@@ -30,6 +30,30 @@ $EX_TEMPFAIL = 75
 $env:PYTHONIOENCODING = "utf-8"
 $script = Join-Path $repo 'scripts\paper_forward.py'
 
+# Pin Yahoo's hostnames to IPs so the pull survives a corporate VPN that breaks the SYSTEM DNS
+# resolver for *.finance.yahoo.com (observed: curl "(6) Could not resolve host"). yfinance fetches
+# over curl/libcurl, which resolves DNS itself, so the VPN's broken resolver sinks every request even
+# though the IPs are reachable. Resolve via a PUBLIC DNS server (VPNs rarely block UDP/53 to these)
+# and hand Python curl `host:port:ip` resolve entries via PLUTUS_YF_RESOLVE (read by
+# yfinance_source._pinned_session). Best-effort: a host no resolver can reach is skipped; if none
+# resolve, the variable stays empty and Python falls back to its default session (system DNS) -- a
+# transient failure the retry loop / next run rides out (recompute-from-inception).
+$yfHosts = 'query1.finance.yahoo.com', 'query2.finance.yahoo.com', 'finance.yahoo.com'
+$resolveEntries = @()
+foreach ($h in $yfHosts) {
+  foreach ($dns in '1.1.1.1', '8.8.8.8', '223.5.5.5') {
+    try {
+      $a = Resolve-DnsName -Server $dns -Name $h -Type A -DnsOnly -ErrorAction Stop |
+        Where-Object { $_.Type -eq 'A' -and $_.IPAddress } | Select-Object -First 1
+      if ($a) { $resolveEntries += "$($h):443:$($a.IPAddress)"; break }
+    } catch { }
+  }
+}
+if ($resolveEntries.Count -gt 0) {
+  $env:PLUTUS_YF_RESOLVE = ($resolveEntries -join ',')
+  "pinned Yahoo DNS -> $env:PLUTUS_YF_RESOLVE" | Out-File -FilePath $log -Append -Encoding utf8
+}
+
 for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
   "=== run $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') (attempt $attempt/$maxAttempts) ===" |
     Out-File -FilePath $log -Append -Encoding utf8

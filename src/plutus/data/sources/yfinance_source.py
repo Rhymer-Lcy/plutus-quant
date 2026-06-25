@@ -15,8 +15,30 @@ spelled out because they bite a backtest:
 """
 from __future__ import annotations
 
+import os
+from functools import lru_cache
+
 import pandas as pd
 import yfinance as yf
+
+
+@lru_cache(maxsize=1)
+def _pinned_session():
+    """A Yahoo-DNS-pinned yfinance session, or None when no pin is configured.
+
+    yfinance fetches over curl/libcurl, which resolves DNS itself -- so a corporate VPN that breaks
+    the SYSTEM resolver for *.finance.yahoo.com makes every pull fail (curl "(6) Could not resolve
+    host"), even though the IPs are reachable. Set ``PLUTUS_YF_RESOLVE`` to a comma-separated list of
+    curl ``host:port:ip`` entries and each request connects to those IPs while keeping the hostname
+    for TLS/SNI, surviving the broken resolver. The scheduler wrapper (scripts/paper_forward.ps1)
+    fills the variable by resolving Yahoo via a PUBLIC DNS server. Unset (e.g. a manual run) returns
+    None, so yfinance uses its default session unchanged."""
+    entries = [e for e in os.environ.get("PLUTUS_YF_RESOLVE", "").split(",") if e]
+    if not entries:
+        return None
+    from curl_cffi import CurlOpt
+    from curl_cffi import requests as creq
+    return creq.Session(impersonate="chrome", curl_options={CurlOpt.RESOLVE: entries})
 
 
 def daily_bars(ticker: str, start: str, end: str, auto_adjust: bool = True) -> pd.DataFrame:
@@ -24,8 +46,8 @@ def daily_bars(ticker: str, start: str, end: str, auto_adjust: bool = True) -> p
 
     Columns: open, high, low, close, volume (close is ADJUSTED when auto_adjust=True).
     Returns an empty frame if Yahoo has no data for the ticker/window."""
-    df = yf.Ticker(ticker).history(start=start, end=end, auto_adjust=auto_adjust,
-                                   actions=False, raw=False)
+    df = yf.Ticker(ticker, session=_pinned_session()).history(
+        start=start, end=end, auto_adjust=auto_adjust, actions=False, raw=False)
     if df.empty:
         return df
     df = df.rename(columns=str.lower)[["open", "high", "low", "close", "volume"]]
@@ -42,7 +64,7 @@ def adjusted_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFra
     if not tickers:
         return pd.DataFrame()
     raw = yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False,
-                      group_by="column", threads=True)
+                      group_by="column", threads=True, session=_pinned_session())
     if raw.empty:
         return pd.DataFrame()
     # Single ticker -> flat columns; multiple -> MultiIndex (field, ticker).
@@ -67,7 +89,7 @@ def raw_close_panel(tickers: list[str], start: str, end: str) -> pd.DataFrame:
     if not tickers:
         return pd.DataFrame()
     raw = yf.download(tickers, start=start, end=end, auto_adjust=False, progress=False,
-                      group_by="column", threads=True)
+                      group_by="column", threads=True, session=_pinned_session())
     if raw.empty:
         return pd.DataFrame()
     if isinstance(raw.columns, pd.MultiIndex):
