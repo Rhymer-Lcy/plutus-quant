@@ -1,8 +1,10 @@
 # Unattended daily wrapper for the net-payout FREE-DATA forward record (Windows Task Scheduler).
 # Mirrors the sibling hermes-quant/scripts/paper_live.ps1. Captures stdout+stderr to a timestamped
 # log (Task Scheduler discards them otherwise) and propagates the Python exit code. Register with:
-#   schtasks /Create /SC DAILY /ST 09:30 /TN plutus-paper-forward /F `
-#     /TR "powershell -NoProfile -ExecutionPolicy Bypass -File <repo>\scripts\paper_forward.ps1"
+#   powershell -ExecutionPolicy Bypass -File scripts\schedule_tasks.ps1 register
+# Do NOT register with a bare `schtasks /ST 09:30`: that stores a FLOATING local time, which silently
+# drifts away from 09:30 Beijing whenever the machine's timezone changes. schedule_tasks.ps1 anchors
+# the trigger to a +08:00 instant instead, so it fires at 09:30 Beijing on any timezone and across DST.
 # 09:30 Beijing reliably has the prior US session's finalized daily bar (US close is ~04:00-05:00
 # Beijing). The forward-record INCEPTION is fixed (live.strategy.PAPER_INCEPTION); this only refreshes
 # "today" -- and because every run recomputes the whole curve from inception, a missed day (PC off /
