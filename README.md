@@ -119,7 +119,6 @@ Free-tier first (the US analog of hermes starting on anonymous BaoStock):
 | CRSP (via WRDS) | bring-your-own licensed extract | survivorship-free total-return prices + PIT membership; **not included** |
 | Stooq | none | daily CSV cross-check; endpoint currently behind a JS bot-check (best-effort) |
 | Alpaca | free key | paper-trading account + market-data API (registered, parked) |
-| Tiingo | free key | cleaner EOD source, rate-limited (optional) |
 
 **Survivorship bias is the main free-data weakness:** Yahoo drops delisted tickers, and a free
 point-in-time membership history is hard to assemble cleanly. The survivorship-free backtests use a

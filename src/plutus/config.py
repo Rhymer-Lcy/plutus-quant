@@ -41,11 +41,6 @@ def require(key: str) -> str:
     return val
 
 
-def tiingo_key() -> str | None:
-    """Optional — only needed for the Tiingo EOD source. None if unset."""
-    return get("TIINGO_API_KEY")
-
-
 def sec_edgar_user_agent() -> str | None:
     """SEC EDGAR requires a descriptive User-Agent (name + email); it is NOT an API key,
     but the SEC blocks requests that omit it. None if unset (caller should fail loudly)."""
