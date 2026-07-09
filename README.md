@@ -15,13 +15,15 @@ walk-forward ML combiner, cross-sectional backtest engine, position sizing, idem
 ledger) and the US data / friction layer are implemented and unit-tested (107 tests).
 
 Headline of the research program: after every classic family was tested under survivorship-free,
-cost-aware, look-ahead-audited rigor, **only one retail-operable edge survived** — a net-payout /
-buyback tilt in liquid mid/small-cap stocks — and it is now being forward paper-traded
-out-of-sample, **not yet validated**.
+cost-aware, look-ahead-audited rigor, **only one edge survived as a deployable core strategy** — a
+net-payout / buyback tilt in liquid mid/small-cap stocks — and it is now being forward paper-traded
+out-of-sample, **not yet validated**. One further edge is retail-operable but too small and episodic
+to be a core: the S&P 500 index delete-reversal, kept as a *satellite*.
 
 ### Research log (honest findings)
 
-Each entry links a written study; the negative results are kept on the record, not buried.
+The negative results are kept on the record, not buried. The major families are below; the remaining
+studies are written up in [docs/](docs/).
 
 - **Survivorship bias, quantified** ([docs/survivorship_study.md](docs/survivorship_study.md)) — on a
   survivorship-free CRSP lake (total-return, delisting-aware prices + point-in-time membership), the
@@ -46,12 +48,21 @@ Each entry links a written study; the negative results are kept on the record, n
   coefficient, real in 2010–2019 (t=3.4), **decayed to statistical zero by 2020–2024** (t=0.57) before
   the 2025 holdout printed the weakest reading on record. Verdict: on-watch, **do not deploy**. The
   most detailed negative result in the program.
+- **S&P 500 index reconstitution** ([docs/index_effect_study.md](docs/index_effect_study.md)) — the
+  ADD run-up is dead post-effective, but the **DELETE-reversal is real**: dropped names earn ~+3.4% to
+  +5.1% abnormal return net of a ~0.30% round-trip over 20–60 days. Retail-operable, but only ~11
+  deletions a year in distressed, volatile names: a genuine **satellite**, not a core strategy.
 - **Net-payout / buyback** ([docs/issuance_study.md](docs/issuance_study.md),
-  [docs/paper_trading.md](docs/paper_trading.md)) — the one survivor. A long-only top-50 book in the
+  [docs/paper_trading.md](docs/paper_trading.md)) — the one deployable core. A long-only top-50 book in the
   liquid mid/small-cap band clears the buy-and-hold bar in-sample (Sharpe ~1.14, 2005–2025),
   signal-specific and cost-robust. It is frozen as the deployed spec (`live/strategy.py`) and
   paper-traded forward from 2026-01-02; the first ~6-month out-of-sample read **lags** the small-cap
   index, so it is on watch, not validated.
+
+Also written up in [docs/](docs/): the first point-in-time factor read; event-time PEAD, small-cap
+PEAD, short-term reversal and overnight returns — each a real gross effect that is not
+retail-tradeable net of cost; pairs trading, whose mean-reversion alpha is no longer there at all;
+and volatility-managed exposure, a genuine risk-adjusted improvement that is an overlay, not alpha.
 
 The durable asset is the methodology — survivorship-free, cost-aware, and look-ahead-audited — that
 reports the truth regardless of the result.
