@@ -13,9 +13,25 @@ network (yfinance).
 from __future__ import annotations
 
 import argparse
+import urllib.error
 
-from plutus.live.forward import run_forward
+import requests
+
+from plutus.live.forward import ForwardDataUnavailable, run_forward
 from plutus.live.strategy import DEPLOYED, PAPER_INCEPTION
+
+# TRANSIENT: the identical run could succeed later (Yahoo unreachable, rate-limited, or an empty
+# pull), so exit 75 and let the wrapper retry. Anything else -- a defect, bad config, a missing lake
+# file -- is FATAL: retrying it for an hour only delays the alert. requests.RequestException and
+# urllib.error.URLError both subclass OSError, but catching OSError wholesale would sweep in
+# FileNotFoundError and silently retry a missing data file, so the tuple is explicit.
+TRANSIENT_ERRORS = (
+    ForwardDataUnavailable,
+    ConnectionError,
+    TimeoutError,
+    urllib.error.URLError,
+    requests.exceptions.RequestException,
+)
 
 
 def main() -> int:
@@ -30,12 +46,18 @@ def main() -> int:
     print("mode: FREE-DATA early read (CRSP selects, yfinance prices forward) -- selection-only, thin sample\n")
     try:
         r = run_forward(args.seed, inception=args.inception, end=args.end)
+    except TRANSIENT_ERRORS:
+        import traceback
+        traceback.print_exc()
+        print("\n[transient] run failed on a network/data condition. Exiting 75 so the "
+              "scheduler retries; the recompute is idempotent (no state is lost).")
+        return 75
     except Exception:
         import traceback
         traceback.print_exc()
-        print("\n[transient] run failed (most likely a yfinance/network issue). Exiting 75 so the "
-              "scheduler retries; the recompute is idempotent (no state is lost).")
-        return 75
+        print("\n[fatal] run failed on a non-transient error. Exiting 1: the scheduler will NOT "
+              "retry. Fix the cause, then re-run (the recompute is idempotent).")
+        return 1
 
     print(f"  selection @ {r['selection_asof']} (CRSP)  ->  forward {r['inception']}..{r['as_of']} "
           f"({r['n_bars']} bars, yfinance)")

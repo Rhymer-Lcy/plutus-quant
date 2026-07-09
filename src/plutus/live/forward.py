@@ -36,6 +36,14 @@ from .strategy import (DEPLOYED, PAPER_INCEPTION, DeployedStrategy, deployed_mem
 TICKER_MAP_FILE = "crsp_smallcap_ticker_map.parquet"
 BENCHMARKS = ["VB", "IWM"]   # VB tracks the CRSP US Small Cap index (apt); IWM = Russell 2000 (context)
 
+
+class ForwardDataUnavailable(RuntimeError):
+    """The forward pull yielded no usable prices -- a TRANSIENT data/network condition, not a bug.
+
+    Typed (rather than a bare ValueError) so the scheduled wrapper can tell "Yahoo was unreachable
+    or returned an empty frame, retry" apart from a genuine defect, which must fail fast instead of
+    being retried for an hour. Mirrors hermes-quant's BaoStockUnavailable."""
+
 # Curated 2026 corporate-action resolutions for book names whose 2025-12-31 CRSP ticker no longer
 # resolves on yfinance. Each was verified against primary sources (see docs/paper_trading.md); a
 # frozen equal-DOLLAR holding's forward return depends only on its forward PRICE PATH, so a
@@ -93,7 +101,8 @@ def frozen_book_forward(forward_prices: pd.DataFrame, seed_cash: float,
     entry = fp.iloc[0]
     valid = [c for c in fp.columns if pd.notna(entry.get(c)) and float(entry.get(c)) > 0]
     if not valid:
-        raise ValueError("no names with a valid inception price")
+        raise ForwardDataUnavailable(
+            "no names with a valid inception price (empty or failed price pull)")
     fp = fp[valid].ffill()
     slip = slippage_bps * 1e-4
     alloc = seed_cash / len(valid)
