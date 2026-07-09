@@ -2,7 +2,7 @@
 
 The point of moving to CRSP was to kill survivorship bias. This is what it bought, measured.
 Same candidate strategy throughout: value (E/P) + light 1-month-reversal blend (5:1), top-20,
-monthly, long-only, US frictions. Reproduce: `scripts/crsp_factor_study.py` (yfinance) and
+monthly, long-only, US frictions. Reproduce: `scripts/yfinance_factor_study.py` (yfinance) and
 `scripts/build_crsp_lake.py` → `scripts/crsp_study.py [--start --end]` (CRSP).
 
 ## The candidate backtest under three lenses

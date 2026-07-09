@@ -11,7 +11,7 @@ Prereq: scripts/build_price_lake.py (prices) and SEC_EDGAR_USER_AGENT set (funda
 
     conda activate plutus
     python scripts/build_price_lake.py --start 2018-01-01 --end 2025-12-31
-    python scripts/crsp_factor_study.py
+    python scripts/yfinance_factor_study.py
 """
 from __future__ import annotations
 
