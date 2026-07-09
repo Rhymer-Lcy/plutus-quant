@@ -136,7 +136,7 @@ src/plutus/        the engine — importable package (src-layout); no trading-fr
   research/
     backtest/      friction-faithful backtest: frictions (US), portfolio, long-short, pairs,
                    optimize, regime, sizing, shared metrics
-    factors/       factor library (value, reversal, momentum, low-vol, quality, size, net-payout)
+    factors/       factor library (value, reversal, momentum, low-vol, quality, net-payout)
     eval/, model/  single-factor IC + calibration; walk-forward LightGBM combiner
   live/            EOD paper trading: deployed net-payout spec (strategy.py), idempotent ledger,
                    CRSP replay (paper.py), free-data forward read (forward.py), data feed

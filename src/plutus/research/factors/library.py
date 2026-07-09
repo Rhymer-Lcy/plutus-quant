@@ -156,10 +156,3 @@ def roe(net_income_ttm: pd.DataFrame, book_equity: pd.DataFrame) -> pd.DataFrame
     -> NaN. Higher = more profitable per unit of equity. Pairs with value to screen out the
     'cheap for a reason' value traps that pure E/P piles into (low-quality distressed names)."""
     return (net_income_ttm / book_equity).where(book_equity > 0)
-
-
-def small_size(market_cap: pd.DataFrame) -> pd.DataFrame:
-    """Negative log market cap (the small-size premium). NOT assumed to be deployed: a
-    size tilt WITHIN a large-cap index can be distress beta rather than the SMB premium --
-    validate before using (cf. the rejected within-HS300 size tilt in hermes-quant)."""
-    return -np.log(market_cap.where(market_cap > 0))
