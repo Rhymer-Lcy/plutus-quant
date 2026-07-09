@@ -50,3 +50,21 @@ def sec_edgar_user_agent() -> str | None:
     """SEC EDGAR requires a descriptive User-Agent (name + email); it is NOT an API key,
     but the SEC blocks requests that omit it. None if unset (caller should fail loudly)."""
     return get("SEC_EDGAR_USER_AGENT")
+
+
+# --- optional network proxy ---------------------------------------------------------
+# yfinance/requests/urllib all honor the standard HTTP_PROXY / HTTPS_PROXY / NO_PROXY
+# environment variables. To route data fetches through a local proxy without hardcoding
+# it in source, set them in .env.local; they are exported to the process environment at
+# import (only when not already set — the real environment always wins).
+_PROXY_KEYS = ("HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY")
+
+
+def _export_proxy_env() -> None:
+    for key in _PROXY_KEYS:
+        val = _FILE_ENV.get(key)
+        if val and not os.environ.get(key) and not os.environ.get(key.lower()):
+            os.environ[key] = val
+
+
+_export_proxy_env()
