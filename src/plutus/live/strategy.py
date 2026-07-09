@@ -58,8 +58,10 @@ PAPER_INCEPTION = "2026-01-02"
 # no 100-share lot there is NO small-account feasibility floor (a 50-name book is fine at $25k),
 # so the tiers instead bracket the CAPACITY knee -- the AUM at which MARKET IMPACT in mid/small
 # caps (position size vs a name's average daily dollar volume, ADV) starts to erode the edge.
-# Impact is NOT modeled by the flat-slippage engine; read the large tiers as "does it scale",
-# cross-checked against the dollar-volume capacity studies (scripts/crsp_gru_capacity_study.py).
+# Impact is NOT modeled by the flat-slippage engine; read the large tiers as "does it scale".
+# CAVEAT: the repo's only capacity curve (scripts/crsp_gru_capacity_study.py) was computed on the
+# RETIRED GRU market-neutral book, not on net-payout. It indicates roughly where a mid/small-cap
+# book's impact knee sits; it is not a net-payout measurement, and no net-payout one has been run.
 #   small  [$25k, $100k, $500k]  -- retail: impact negligible even in small caps (the edge's
 #                                   home turf is fully accessible here).
 #   medium [$2M, $10M]           -- serious individual / small fund: impact modest, working regime.

@@ -12,7 +12,7 @@ model, data adapters, universe, and execution are all market-specific.
 A rigorous, survivorship-free research platform with **one strategy on a forward out-of-sample
 watch and no live capital deployed**. The market-agnostic research core (factor evaluation,
 walk-forward ML combiner, cross-sectional backtest engine, position sizing, idempotent paper
-ledger) and the US data / friction layer are implemented and unit-tested (104 tests).
+ledger) and the US data / friction layer are implemented and unit-tested (107 tests).
 
 Headline of the research program: after every classic family was tested under survivorship-free,
 cost-aware, look-ahead-audited rigor, **only one retail-operable edge survived** — a net-payout /

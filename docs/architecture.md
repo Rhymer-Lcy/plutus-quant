@@ -30,10 +30,12 @@ and data layers have stabilized. Extract a shared core later, if duplication act
 ### Rebuilt for US (market-specific)
 
 - `research/backtest/frictions.py` — US cost model (see [MARKET_FACTS.md](MARKET_FACTS.md)).
-- `data/sources/` — yfinance (price), Stooq (cross-check), SEC EDGAR (fundamentals), Alpaca.
-- the universe / point-in-time membership (S&P 500 / Nasdaq-100) — the hard, survivorship-
-  sensitive part (see [data_sources.md](data_sources.md)).
-- `live/feed.py`, `execution/` — Alpaca EOD feed and (deferred) live gateway.
+- `data/sources/` — yfinance (price), Stooq (cross-check), SEC EDGAR (fundamentals), CRSP
+  (licensed survivorship-free extract), IBES (licensed estimates). No Alpaca adapter exists here.
+- the universe / point-in-time membership (S&P 500, from fja05680/sp500) — the hard, survivorship-
+  sensitive part (see [data_sources.md](data_sources.md)). Nasdaq-100 is not implemented.
+- `live/feed.py` — EOD feed, built on yfinance. `execution/` — deferred Alpaca live gateway, an
+  unused stub; Alpaca supplies no data anywhere in the pipeline today.
 
 ## No framework fork
 
