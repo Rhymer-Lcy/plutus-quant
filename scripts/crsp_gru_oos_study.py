@@ -65,7 +65,7 @@ def main() -> int:
     print(f"lake/eval span ends {last}; GRU signal has {n_2025} month-ends in {HOLDOUT} "
           f"(the holdout year).")
     if n_2025 == 0:
-        print("!! No 2025 signal months — rebuild the lake to 2025 first. Aborting.")
+        print("No 2025 signal months — rebuild the lake to 2025 first. Aborting.")
         return 1
 
     # ---- (1) rank IC by year; 2025 is the genuine out-of-sample year -------------------------

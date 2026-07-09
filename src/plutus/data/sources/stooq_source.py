@@ -11,7 +11,7 @@ daily US bars are split-adjusted.
 
 CAVEATS (degrade gracefully -> EMPTY frame, never raise, so a partial pull is fine):
   - Rate limit: the free endpoint throttles ("Exceeded the daily hits limit").
-  - !! Verified 2026-06-21: the CSV endpoint currently serves a JavaScript browser-verification
+  - NOTE, verified 2026-06-21: the CSV endpoint currently serves a JavaScript browser-verification
     CHALLENGE page (not CSV) to plain HTTP clients, so a direct `requests` pull returns empty.
     Treat Stooq as BEST-EFFORT, not a reliable backbone. When it is challenged you need a
     browser-driven fetch or a different source; we do NOT attempt to evade the bot check. The

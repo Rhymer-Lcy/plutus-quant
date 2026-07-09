@@ -59,7 +59,7 @@ insignificance after ~2002** as the trade was crowded — exactly what we see fr
   borrow is expensive/hard, so a small-cap pairs book is unlikely to fare better net of cost.
 - **Dollar-neutral 50/50 execution** (cointegration uses the β-residual only for the *signal*).
   β-hedging would trim residual market exposure and a little vol, but cannot turn a −0.20 Sharpe
-  positive — the spreads simply don't revert enough to clear cost.
+  positive — the spreads do not revert enough to clear cost.
 - The result is a clean walk-forward already (non-overlapping windows), so it needs no separate OOS
   year — every window is traded on formation data that precedes it.
 
@@ -68,5 +68,5 @@ insignificance after ~2002** as the trade was crowded — exactly what we see fr
 Classic equity statistical arbitrage (distance **and** cointegration) is arbitraged out of liquid US
 large-cap — the same verdict the cross-sectional factors and PEAD reached. It is genuinely
 capacity-limited (the retail zone), but capacity was never the binding constraint here; **robust
-mean-reversion alpha net of cost simply isn't there anymore.** One more retail-accessible US-equity
+mean-reversion alpha net of cost is no longer present.** One more retail-accessible US-equity
 family, rigorously ruled out.

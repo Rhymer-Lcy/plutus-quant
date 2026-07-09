@@ -35,7 +35,7 @@ single-regime sample.
 
 **Do not misread this.** With factor IC ≈ 0, the +372% is almost entirely **market beta +
 concentration**, not alpha: 2018–2025 was a strong bull market and a top-20 slice of the S&P
-500 is basically concentrated long equity. The −45% drawdown is large for that reason.
+500 is concentrated long equity. The −45% drawdown is large for that reason.
 
 ## Caveats (why this is not a result)
 

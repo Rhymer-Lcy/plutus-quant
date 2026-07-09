@@ -27,7 +27,7 @@ Over 2005–2024 the candidate strategy returns CAGR **4.47%** (below a passive 
 with an **−88% max drawdown, troughing 2008-11-20**. Mechanism: a value + reversal tilt buys
 the cheapest, most beaten-down names *into* the 2008 crisis — i.e. financials that then went to
 **zero** (Lehman, WaMu, …). CRSP includes those bankruptcies; yfinance drops them, so the
-biased dataset literally cannot show the wipeout. Equity: $126k peak (2007-06) → **$15k**
+biased dataset cannot show the wipeout. Equity: $126k peak (2007-06) → **$15k**
 (2008-11) → $240k (2024).
 
 ### Finding 3 — no tradeable single-factor edge (clean data)
