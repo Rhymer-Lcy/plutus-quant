@@ -10,15 +10,18 @@
 # "today" -- and because every run recomputes the whole curve from inception, a missed day (PC off /
 # holiday) loses nothing: the next run catches up.
 #
+# Portable: the repo root is derived from this script's location (scripts/ -> repo), and the python
+# interpreter comes from PLUTUS_PYTHON (set at user scope by `schedule_tasks.ps1 register`, which a
+# scheduled task inherits), else `python` on PATH for a manually-run, env-activated invocation. No
+# interpreter path is hardcoded.
+#
 # RETRY-WITH-BACKOFF: paper_forward.py exits 75 (EX_TEMPFAIL) on a TRANSIENT failure (yfinance
 # unreachable / empty pull) and 1 on a fatal error. On 75 this wrapper waits and retries up to
 # PLUTUS_RETRY_MAX times spaced PLUTUS_RETRY_DELAY_SEC apart (default 12 x 300 s ~= 1 h). Each run is
 # idempotent (recompute-from-inception), so retrying is safe.
 $ErrorActionPreference = "Stop"
 $repo = Split-Path -Parent $PSScriptRoot
-$py = if ($env:PLUTUS_PYTHON) { $env:PLUTUS_PYTHON }
-      elseif (Test-Path "D:\Anaconda3\envs\plutus\python.exe") { "D:\Anaconda3\envs\plutus\python.exe" }
-      else { "python" }
+$py = if ($env:PLUTUS_PYTHON) { $env:PLUTUS_PYTHON } else { "python" }
 $logdir = Join-Path $repo "results\paper\logs"
 New-Item -ItemType Directory -Force -Path $logdir | Out-Null
 $log = Join-Path $logdir ("paper_forward_{0:yyyyMMdd}.log" -f (Get-Date))
