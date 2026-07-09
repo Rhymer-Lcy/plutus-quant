@@ -41,6 +41,11 @@ Each entry links a written study; the negative results are kept on the record, n
   costs. An early Sharpe-7.6 result was caught and **retracted** as a look-ahead artifact
   (announcement-gap capture); the fix (skip the reaction day) de-leaked all earlier event-time PEAD
   numbers.
+- **ML / temporal-DL cross-sectional zoo** ([docs/ml_zoo_study.md](docs/ml_zoo_study.md)) — a GRU
+  small-cap market-neutral signal looked tradeable in-sample (~Sharpe 0.6–0.67), but its information
+  coefficient, real in 2010–2019 (t=3.4), **decayed to statistical zero by 2020–2024** (t=0.57) before
+  the 2025 holdout printed the weakest reading on record. Verdict: on-watch, **do not deploy**. The
+  most detailed negative result in the program.
 - **Net-payout / buyback** ([docs/issuance_study.md](docs/issuance_study.md),
   [docs/paper_trading.md](docs/paper_trading.md)) — the one survivor. A long-only top-50 book in the
   liquid mid/small-cap band clears the buy-and-hold bar in-sample (Sharpe ~1.14, 2005–2025),

@@ -264,7 +264,14 @@ mechanically downstream of the same ~11 IC months — an n=11 Sharpe carries SE�
 Scripts: `crsp_gru_oos_study.py` (per-year IC + 2025 book + capacity), `crsp_oos_diagnostics_study.py` (data is
 not the cause), `crsp_oos_inference_study.py` (trailing-window fade + significance).
 
-## FINAL VERDICT of the quant program
+## VERDICT — the ML / temporal-DL cross-sectional line
+
+SCOPE: the verdict of *this* research line, not of the whole program. It was written before the
+net-payout / buyback study, which was run afterwards, cleared the in-sample bar, and is now the
+deployed spec -- forward paper-traded and **not yet validated** (its first out-of-sample read lags
+the small-cap benchmark; see [issuance_study.md](issuance_study.md) and
+[paper_trading.md](paper_trading.md)). That result does not overturn anything below.
+
 "Is small profit possible?" — **The one signal that looked tradeable in-sample did NOT survive
 out-of-sample.** The temporal-DL small-cap market-neutral edge (in-sample ~Sharpe 0.6–0.67 at small
 AUM) rests on an IC that was real in 2010–2019 (t=3.4) but **decayed to statistical zero by 2020–2024
@@ -272,10 +279,10 @@ AUM) rests on an IC that was real in 2010–2019 (t=3.4) but **decayed to statis
 though n=11 makes that single year individually inconclusive. The honest call is **on-watch, do NOT
 deploy**: the edge is no longer statistically detectable, whether from permanent alpha decay/crowding
 or a regime the slow-adapting (one-retrain-per-year) locked design can't trade through — the
-deployment implication is identical. Everything else in the program — classic factors (large & small
-cap), PEAD (even with IBES) — had no tradeable edge after rigor either.
+deployment implication is identical. Of the families tested up to this point — classic factors (large
+& small cap), PEAD (even with IBES) — none had a tradeable edge after rigor either.
 
-**What actually holds up is the platform, not any strategy.** The path ran through, and was
+**What actually holds up is the platform; no strategy is yet validated out-of-sample.** The path ran through, and was
 repeatedly saved by, a survivorship-free + cost-aware + look-ahead-audited + capacity-aware +
 **out-of-sample-validated** harness that rejected every mirage along the way (survivorship +372%,
 PEAD Sharpe 7, and now an in-sample edge that an honest 2025 holdout + trailing-window test showed is
