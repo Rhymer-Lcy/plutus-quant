@@ -1,25 +1,27 @@
-"""Build the OPEN/CLOSE/quote panels needed for the overnight-return study (large-cap S&P 500).
+"""Build the OPEN/CLOSE/quote panels for a chosen universe (large-cap or smallcap).
 
-The main CRSP lake (build_crsp_lake.py) keeps only the TR-adjusted close. The overnight-vs-intraday
-decomposition needs the raw daily OPEN and CLOSE (same day) and the closing BID/ASK quote. We stream
-those five fields (DlyOpen, DlyClose, DlyRet, DlyBid, DlyAsk) for the SAME large-cap union PERMNOs
-already in crsp_adj_close.parquet, in one pass over the 28 GB zip, into:
+The main CRSP lakes keep only the TR-adjusted close. The overnight-return decomposition and any
+OPEN-entry event study need the raw daily OPEN and CLOSE (same day) and the closing BID/ASK quote.
+We stream five fields (DlyOpen, DlyClose, DlyRet, DlyBid, DlyAsk) for the chosen universe's union
+PERMNOs (the columns of its adj_close panel), in one pass over the 28 GB zip, into:
 
-  crsp_open_raw.parquet    raw DlyOpen   (date x PERMNO, abs value)
-  crsp_close_raw.parquet   raw DlyClose  (date x PERMNO, abs value)
-  crsp_dlyret.parquet      DlyRet        (date x PERMNO; close-to-close TOTAL return)
-  crsp_halfspread.parquet  (DlyAsk-DlyBid)/mid/2 = relative HALF-spread (date x PERMNO)
+  crsp[_smallcap]_open_raw.parquet    raw DlyOpen   (date x PERMNO, abs value)
+  crsp[_smallcap]_close_raw.parquet   raw DlyClose  (date x PERMNO, abs value)
+  crsp[_smallcap]_dlyret.parquet      DlyRet        (date x PERMNO; close-to-close TOTAL return)
+  crsp[_smallcap]_halfspread.parquet  (DlyAsk-DlyBid)/mid/2 = relative HALF-spread (date x PERMNO)
 
 The overnight study derives, split- and dividend-immune, intraday[t] = close[t]/open[t]-1 (same-day
 ratio, so any split/dividend that occurs OVERNIGHT cannot contaminate it) and then overnight[t] =
 (1+DlyRet[t])/(1+intraday[t])-1. The half-spread is the realistic cost of actually transacting at
-the close/open auctions -- the heart of whether the overnight effect is retail-tradeable.
+the close/open auctions -- the heart of whether an anomaly is retail-tradeable.
 
     conda activate plutus
-    python scripts/build_crsp_open_lake.py
+    python scripts/build_crsp_open_lake.py                       # large-cap (default)
+    python scripts/build_crsp_open_lake.py --universe smallcap   # mid/small band union
 """
 from __future__ import annotations
 
+import argparse
 import zipfile
 
 import pandas as pd
@@ -34,7 +36,13 @@ from plutus.paths import PARQUET_DIR, RAW_DIR, ensure_dirs
 ZIP = RAW_DIR / "crsp" / "daily_2000_2025.csv.zip"
 COLUMNS = ["PERMNO", "DlyCalDt", "DlyOpen", "DlyClose", "DlyRet", "DlyBid", "DlyAsk"]
 NUMERIC = ["DlyOpen", "DlyClose", "DlyRet", "DlyBid", "DlyAsk"]
-START, END = "2005-01-01", "2024-12-31"      # match the large-cap lake / membership spells window
+START, END = "2005-01-01", "2024-12-31"      # match the lakes / membership spells window
+
+# universe -> (adj panel whose columns define the union, output file prefix)
+UNIVERSES = {
+    "largecap": ("crsp_adj_close.parquet", "crsp"),
+    "smallcap": ("crsp_smallcap_adj_close.parquet", "crsp_smallcap"),
+}
 
 
 def stream_open(permnos: set, block_size: int = 64 << 20) -> pd.DataFrame:
@@ -67,10 +75,16 @@ def stream_open(permnos: set, block_size: int = 64 << 20) -> pd.DataFrame:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--universe", choices=sorted(UNIVERSES), default="largecap",
+                    help="which union to stream: largecap (crsp_*) or smallcap (crsp_smallcap_*)")
+    args = ap.parse_args()
+    adj_name, prefix = UNIVERSES[args.universe]
+
     ensure_dirs()
-    adj = pd.read_parquet(PARQUET_DIR / "crsp_adj_close.parquet")
+    adj = pd.read_parquet(PARQUET_DIR / adj_name)
     permnos = {int(c) for c in adj.columns}
-    print(f"streaming open/close/quote for {len(permnos)} large-cap PERMNOs, {START}..{END} "
+    print(f"streaming open/close/quote for {len(permnos)} {args.universe} PERMNOs, {START}..{END} "
           f"(one pass over {ZIP.name})...")
     long = stream_open(permnos)
     print(f"  {len(long):,} rows")
@@ -78,7 +92,7 @@ def main() -> int:
     def pivot(col: str, take_abs: bool = False) -> pd.DataFrame:
         d = long[["PERMNO", "date", col]].dropna(subset=[col]).drop_duplicates(["PERMNO", "date"])
         wide = d.pivot(index="date", columns="PERMNO", values=col).sort_index()
-        wide.columns = [str(c) for c in wide.columns]      # str(PERMNO) to match crsp_adj_close
+        wide.columns = [str(c) for c in wide.columns]      # str(PERMNO) to match the adj panels
         return wide.abs() if take_abs else wide
 
     open_raw = pivot("DlyOpen", take_abs=True)             # legacy CRSP sign = no-trade flag
@@ -88,11 +102,11 @@ def main() -> int:
     mid = (bid + ask) / 2.0
     half_spread = ((ask - bid) / mid / 2.0).where(mid > 0)
 
-    atomic_to_parquet(open_raw, PARQUET_DIR / "crsp_open_raw.parquet")
-    atomic_to_parquet(close_raw, PARQUET_DIR / "crsp_close_raw.parquet")
-    atomic_to_parquet(ret, PARQUET_DIR / "crsp_dlyret.parquet")
-    atomic_to_parquet(half_spread, PARQUET_DIR / "crsp_halfspread.parquet")
-    print(f"  wrote open/close/ret/halfspread panels ({open_raw.shape}) to {PARQUET_DIR}")
+    atomic_to_parquet(open_raw, PARQUET_DIR / f"{prefix}_open_raw.parquet")
+    atomic_to_parquet(close_raw, PARQUET_DIR / f"{prefix}_close_raw.parquet")
+    atomic_to_parquet(ret, PARQUET_DIR / f"{prefix}_dlyret.parquet")
+    atomic_to_parquet(half_spread, PARQUET_DIR / f"{prefix}_halfspread.parquet")
+    print(f"  wrote {prefix}_open/close/dlyret/halfspread panels ({open_raw.shape}) to {PARQUET_DIR}")
     print(f"  median relative half-spread (all names/days): {half_spread.stack().median():.4%}")
     return 0
 
