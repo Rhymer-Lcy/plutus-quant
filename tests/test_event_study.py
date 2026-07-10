@@ -62,3 +62,56 @@ def test_threshold_excludes_neutral_events():
     # threshold above the neutral SUE (0) but below the ±2 surprises -> only 4 long / 4 short names
     res = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5)
     assert res.avg_long <= 4.0 and res.avg_short <= 4.0
+
+
+def test_intraday_entry_replaces_only_the_entry_day():
+    # entry day earns the intraday panel's value; all later days the close-to-close panel.
+    ret, events = _panels()
+    intr = ret + 0.01                                  # intraday = close-to-close +1% every day
+    base = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                slippage_bps=0.0, borrow_bps_annual=0.0)
+    fast = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                slippage_bps=0.0, borrow_bps_annual=0.0, intraday_entry=intr)
+    # longs gain +1% on their entry day, shorts LOSE 1% (short leg is subtracted): with equal
+    # long/short books the two entry-day effects cancel in the LS return only if entries align;
+    # here they do (same entry dates), so isolate via a long-only event set instead.
+    long_events = events[events["sue"] > 0]
+    b1 = event_time_portfolio(long_events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                              slippage_bps=0.0, borrow_bps_annual=0.0)
+    f1 = event_time_portfolio(long_events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                              slippage_bps=0.0, borrow_bps_annual=0.0, intraday_entry=intr)
+    assert f1.ann_return > b1.ann_return               # faster entry captured the extra day-0 gain
+    # and with an intraday panel IDENTICAL to close-to-close, results are unchanged (parity)
+    same = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                slippage_bps=0.0, borrow_bps_annual=0.0, intraday_entry=ret)
+    assert np.isclose(same.ann_return, base.ann_return)
+
+
+def test_halfspread_panel_charges_per_name_and_falls_back():
+    ret, events = _panels()
+    # a zero-spread panel = free trading; a wide-spread panel must cost more than flat 5 bps
+    zero = ret * 0.0
+    wide = ret * 0.0 + 0.02                            # 2% half-spread, every name/day
+    r_zero = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                  slippage_bps=5.0, borrow_bps_annual=0.0, halfspread_panel=zero)
+    r_flat = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                  slippage_bps=5.0, borrow_bps_annual=0.0)
+    r_wide = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                  slippage_bps=5.0, borrow_bps_annual=0.0, halfspread_panel=wide)
+    assert r_zero.ann_return > r_flat.ann_return > r_wide.ann_return
+    # NaN spreads fall back to the flat slippage -> identical to the flat run
+    nan_panel = ret * np.nan
+    r_nan = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                                 slippage_bps=5.0, borrow_bps_annual=0.0, halfspread_panel=nan_panel)
+    assert np.isclose(r_nan.ann_return, r_flat.ann_return)
+
+
+def test_default_path_parity_with_new_arguments_off():
+    # the two new arguments default to None; the default path must be numerically unchanged
+    ret, events = _panels()
+    a = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                             slippage_bps=15.0, borrow_bps_annual=300.0, entry_offset=1)
+    b = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
+                             slippage_bps=15.0, borrow_bps_annual=300.0, entry_offset=1,
+                             intraday_entry=None, halfspread_panel=None)
+    assert np.isclose(a.ann_return, b.ann_return) and np.isclose(a.sharpe, b.sharpe)

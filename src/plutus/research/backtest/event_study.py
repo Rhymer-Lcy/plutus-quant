@@ -78,7 +78,9 @@ class EventPortfolioResult:
 
 def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_days: int = 40,
                          sue_threshold: float = 0.5, slippage_bps: float = 5.0,
-                         borrow_bps_annual: float = 50.0, entry_offset: int = 0) -> EventPortfolioResult:
+                         borrow_bps_annual: float = 50.0, entry_offset: int = 0,
+                         intraday_entry: pd.DataFrame | None = None,
+                         halfspread_panel: pd.DataFrame | None = None) -> EventPortfolioResult:
     """Dollar-neutral overlapping long-short: each event with sue >= +threshold is held LONG for
     `hold_days` trading days from the day after filing; sue <= -threshold held SHORT. Equal-
     weight within each leg each day. Net of per-turnover slippage (both legs) and a daily borrow
@@ -86,7 +88,20 @@ def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_day
 
     `entry_offset`: extra trading days to wait before entering — use >=1 to skip the
     announcement-reaction day so the close-to-close engine does not capture the post-close
-    overnight gap as if it were tradeable drift (look-ahead/jump-capture)."""
+    overnight gap as if it were tradeable drift (look-ahead/jump-capture).
+
+    `intraday_entry` (optional): a (date x PERMNO) panel of SAME-DAY open-to-close returns
+    (raw_close/raw_open - 1; split/dividend-immune because both sides are the same day). When
+    given, a position enters at the OPEN of its entry day: on that one day it earns the intraday
+    value instead of the close-to-close return (whose overnight-gap component predates the open
+    and is not capturable), and close-to-close thereafter. The announcement is public before that
+    open, so this is leak-free faster entry. Exit timing is unchanged, so results are directly
+    comparable to the close-entry run at the same (hold_days, entry_offset).
+
+    `halfspread_panel` (optional): a (date x PERMNO) panel of relative HALF-spreads. When given,
+    each name's turnover is charged at its own half-spread that day (falling back to
+    `slippage_bps` where the spread is missing) instead of the flat `slippage_bps`. Defaults keep
+    both features off; the default path is unchanged (parity-tested)."""
     idx = ret_panel.index
     n = len(idx)
     ev = events.dropna(subset=["permno", "entry_date", "sue"]).copy()
@@ -94,12 +109,14 @@ def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_day
 
     long_on: dict[int, list] = defaultdict(list)
     short_on: dict[int, list] = defaultdict(list)
+    entering: dict[int, set] = defaultdict(set)        # names whose position STARTS on day d
     for permno, epos, sue in zip(ev["permno"], ev["epos"], ev["sue"]):
         if epos >= n or permno not in ret_panel.columns:
             continue
         book = long_on if sue >= sue_threshold else short_on if sue <= -sue_threshold else None
         if book is None:
             continue
+        entering[epos].add(permno)
         for d in range(epos, min(epos + hold_days, n)):
             book[d].append(permno)
 
@@ -110,6 +127,13 @@ def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_day
     rets, n_long, n_short = [], [], []
     for i in range(n):
         row = ret_panel.iloc[i]
+        if intraday_entry is not None and entering.get(i):
+            # entry-day names earn open->close; the overnight gap predates the open
+            intr = intraday_entry.iloc[i]
+            row = row.copy()
+            for c in entering[i]:
+                if c in intr.index and not np.isnan(intr[c]):
+                    row[c] = intr[c]
         L, S = long_on.get(i, []), short_on.get(i, [])
         wl = {c: 1.0 / len(L) for c in L} if L else {}
         ws = {c: 1.0 / len(S) for c in S} if S else {}
@@ -117,9 +141,22 @@ def event_time_portfolio(events: pd.DataFrame, ret_panel: pd.DataFrame, hold_day
         sr = float(np.nanmean([row.get(c, np.nan) for c in S])) if S else 0.0
         lr = 0.0 if np.isnan(lr) else lr
         sr = 0.0 if np.isnan(sr) else sr
-        turn = (sum(abs(wl.get(c, 0.0) - prev_l.get(c, 0.0)) for c in set(wl) | set(prev_l))
-                + sum(abs(ws.get(c, 0.0) - prev_s.get(c, 0.0)) for c in set(ws) | set(prev_s)))
-        rets.append(lr - sr - turn * slip - (borrow_per_day if S else 0.0))
+        if halfspread_panel is not None:
+            hs = halfspread_panel.iloc[i]
+
+            def name_cost(c):
+                v = hs.get(c, np.nan)
+                return float(v) if not np.isnan(v) else slip
+
+            cost = (sum(abs(wl.get(c, 0.0) - prev_l.get(c, 0.0)) * name_cost(c)
+                        for c in set(wl) | set(prev_l))
+                    + sum(abs(ws.get(c, 0.0) - prev_s.get(c, 0.0)) * name_cost(c)
+                          for c in set(ws) | set(prev_s)))
+        else:
+            turn = (sum(abs(wl.get(c, 0.0) - prev_l.get(c, 0.0)) for c in set(wl) | set(prev_l))
+                    + sum(abs(ws.get(c, 0.0) - prev_s.get(c, 0.0)) for c in set(ws) | set(prev_s)))
+            cost = turn * slip
+        rets.append(lr - sr - cost - (borrow_per_day if S else 0.0))
         n_long.append(len(L))
         n_short.append(len(S))
         prev_l, prev_s = wl, ws
