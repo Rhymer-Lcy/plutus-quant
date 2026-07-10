@@ -38,10 +38,16 @@ def _rev_to_permno(panel: pd.DataFrame, ticker_to_permno: dict, cols) -> pd.Data
     return p.loc[:, ~p.columns.duplicated()].reindex(columns=cols)
 
 
+# Pin to the documented window (through 2024): the smallcap lake was later rebuilt through 2025
+# for the ML/GRU OOS line, which would otherwise shift the documented standalone-IC figures.
+# See crsp_smallcap_longshort_study.py for the same convention.
+LAKE_END = "2024-12-31"
+
+
 def run() -> dict:
     ensure_dirs()
-    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
-    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
+    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet").loc[:LAKE_END]
+    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet").loc[:LAKE_END]
     eval_dates = month_ends(adj.index)
     band = crsp.size_band_members_asof(cap)
 

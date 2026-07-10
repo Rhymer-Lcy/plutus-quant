@@ -56,11 +56,17 @@ def build_events(universe_permnos: set) -> pd.DataFrame:
     return ev[["permno", "anndats", "sue", "n_est", "actual", "consensus", "dispersion"]]
 
 
+# Pin to the documented window (2010-2024): the smallcap lake was later rebuilt through 2025 for
+# the ML/GRU OOS line, which would otherwise shift every CAAR/long-short figure (late-2024 events
+# gain post-window days). See crsp_smallcap_longshort_study.py for the same convention.
+LAKE_END = "2024-12-31"
+
+
 def run(sue_threshold: float = 1.0, slippage_bps: float = 5.0, borrow_bps_annual: float = 50.0,
         entry_offset: int = 1, rebuild: bool = False) -> dict:
     ensure_dirs()
-    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
-    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
+    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet").loc[:LAKE_END]
+    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet").loc[:LAKE_END]
     dates = adj.index
     members_asof = crsp.size_band_members_asof(cap)
     ret = adj.pct_change(fill_method=None)

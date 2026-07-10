@@ -28,12 +28,18 @@ from plutus.research.factors import library as fl
 
 from plutus.research.backtest.metrics import month_ends
 
+# The smallcap lake was later rebuilt through 2025 for the ML/GRU out-of-sample line, which shifted
+# every unpinned downstream number (late-2024 events gained post-window days; the union grew by
+# 2025-only names). This CLASSIC study evaluates the window its document states (2005-2024), so it
+# pins the panels there and stays exactly reproducible; the OOS studies slice their own windows.
+LAKE_END = "2024-12-31"
+
 
 def run(quantile: float = 0.2, slippage_bps: float = 15.0, borrow_bps_annual: float = 300.0,
         exclude_top: int = 500, band_size: int = 2500) -> dict:
     ensure_dirs()
-    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet")
-    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet")
+    adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet").loc[:LAKE_END]
+    cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet").loc[:LAKE_END]
     dates = adj.index
     members_asof = crsp.size_band_members_asof(cap, exclude_top=exclude_top, band_size=band_size)
     market = cap_weighted_index(adj, cap)
