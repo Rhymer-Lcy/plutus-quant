@@ -59,6 +59,14 @@ studies are written up in [docs/](docs/).
   paper-traded forward from 2026-01-02; the first ~6-month out-of-sample read **lags** the small-cap
   index, so it is on watch, not validated.
 
+- **Pre-registered outside claims** ([docs/topgainer_study.md](docs/topgainer_study.md),
+  [docs/sp1_study.md](docs/sp1_study.md)) — two heuristics from a friend, each frozen in a public
+  issue (#1, #2) before any code existed. Daily top-gainer rotation is rejected at every reading
+  (gross −29%, net −99.5% over 2005–2024 vs +724% for the benchmark). "Always hold the largest
+  market cap" beats on raw return (+1210%) and DCA but fails risk-adjusted (Sharpe 0.60 vs 0.65),
+  with all of its outperformance confined to the 2015–24 mega-cap regime — rejected under the
+  frozen rule.
+
 Also written up in [docs/](docs/): the first point-in-time factor read; event-time PEAD, small-cap
 PEAD, short-term reversal and overnight returns — each a real gross effect that is not
 retail-tradeable net of cost; pairs trading, whose mean-reversion alpha is no longer there at all;
