@@ -153,17 +153,21 @@ def stream_universe(zip_path: str | Path, start, end, price_min: float = 5.0,
 
 
 def stream_industry(zip_path: str | Path, sic_codes: set[str], start, end,
-                    price_min: float = 5.0, cap_min_000: float = 100_000.0,
                     block_size: int = 64 << 20) -> pd.DataFrame:
-    """Stream the daily CSV keeping tradable COMMON stocks whose SIC code is in `sic_codes` --
-    an INDUSTRY lake (e.g. pharma/biotech for the catalyst-drift study). Same tradability gates
-    as `stream_universe` (EQTY/COM, NYSE/AMEX/NASDAQ, price >= `price_min`, cap >=
-    `cap_min_000` in $000s), so the sample is what a retail account could actually trade.
+    """Stream the daily CSV keeping COMMON stocks on a major exchange whose SIC code is in
+    `sic_codes` -- an INDUSTRY lake (pharma/biotech for the catalyst study, docs/biotech_catalyst_study.md).
 
-    Keeps the bar's OPEN and the quoted BID/ASK as well as the close: the overnight gap needs
-    the open, and a catalyst-day spread in a small biotech is the dominant cost. SIC is the
-    security's code AS OF each row, so a reclassified name enters/leaves the industry on the
-    CRSP date, not retroactively (point-in-time by construction). Returns a tidy long frame."""
+    DELIBERATELY NO price/cap filter, unlike `stream_universe`. A tradability gate belongs at
+    STUDY time (was this event tradable when it happened?), not in the lake: filtering rows out
+    of the lake would delete a name's history the moment it fell below the threshold, so a
+    biotech that gaps up and then craters past $5 would have its post-event LOSSES truncated --
+    an upward bias in exactly the quantity the study measures. The lake therefore keeps every
+    row and carries DlyClose and DlyCap so the study can gate on them.
+
+    Keeps the bar's OPEN and the quoted BID/ASK: the overnight gap needs the open, and a
+    catalyst-day spread in a small biotech is the dominant cost. SIC is the security's code AS
+    OF each row, so a reclassified name enters/leaves the industry on the CRSP date, not
+    retroactively (point-in-time by construction). Returns a tidy long frame."""
     str_cols = ["PERMNO", "DlyCalDt", "Ticker", "SICCD", "DlyRet", "SecurityType",
                 "SecuritySubType", "PrimaryExch"]
     float_cols = ["DlyClose", "DlyOpen", "DlyCap", "DlyPrcVol", "DlyBid", "DlyAsk"]
@@ -181,13 +185,11 @@ def stream_industry(zip_path: str | Path, sic_codes: set[str], start, end,
                                     convert_options=conv)
             for batch in reader:
                 t = pa.Table.from_batches([batch])
-                tradable = pc.and_kleene(
+                common = pc.and_kleene(
                     pc.and_kleene(pc.equal(t["SecurityType"], "EQTY"),
                                   pc.equal(t["SecuritySubType"], "COM")),
-                    pc.and_kleene(pc.is_in(t["PrimaryExch"], value_set=exch),
-                                  pc.and_kleene(pc.greater_equal(t["DlyClose"], price_min),
-                                                pc.greater_equal(t["DlyCap"], cap_min_000))))
-                t = t.filter(pc.and_kleene(tradable, pc.is_in(t["SICCD"], value_set=want_sic)))
+                    pc.is_in(t["PrimaryExch"], value_set=exch))
+                t = t.filter(pc.and_kleene(common, pc.is_in(t["SICCD"], value_set=want_sic)))
                 if t.num_rows:
                     parts.append(t.drop_columns(["SecurityType", "SecuritySubType", "PrimaryExch"]))
     if not parts:
