@@ -61,10 +61,40 @@ of the close captures a small day-1 bounce (+1.26% gross, not significant) that 
 back and more by day 20 — and that figure is *optimistic*, because CRSP quotes the closing
 bid/ask while a real catalyst-day opening spread is far wider.
 
-## "Sell the news" is real — and still not a trade for you
+> ## AMENDED 2026-07-14 — the drift is real, but it is NOT about drugs
+>
+> A follow-up study, pre-registered as [issue #5](https://github.com/Rhymer-Lcy/plutus-quant/issues/5)
+> and written up in [gap_lottery_study.md](gap_lottery_study.md), settled the "mechanism is not
+> identified" limitation that this page admits below. The answer: **the negative drift is not
+> catalyst-specific.** Any stock that gaps up ≥ +20% bleeds about the same amount, whatever its
+> industry:
+>
+> | 20d net abnormal | mean | t(qtr) | N |
+> |---|---:|---:|---:|
+> | biotech gappers | −3.06% | −2.22 | 1,262 |
+> | **non-biotech gappers** | **−2.98%** | **−4.54** | 4,687 |
+> | **matched difference** (same quarter × cap tercile × gap tercile) | **+0.28%** | **0.01** | 519 cells |
+>
+> A pre-registered regression agrees: the biotech dummy is **+0.0133 (t = +1.46)** — if anything
+> biotech gappers do marginally *better* than comparable non-biotech gappers.
+>
+> **So the section below over-attributed a general phenomenon to drugs.** The finding that
+> replaces it is broader and statistically stronger: *do not chase any +20% gap*. Read the
+> "sell the news" heading below as **"post-gap drift"**, and note that it is a property of
+> gapping, not of trial data. Everything else on this page — that you cannot get in after the
+> news, that the money moves before the announcement, that the typical trade loses — stands.
+>
+> That study also **corrects the sample size** on this page: the correct count is **1,262**, not
+> 1,257. The "≥ 20 prior traded days" gate was computed on the biotech lake, whose panel only
+> carries rows for the days a company was *classified* pharma — silently turning a price-history
+> requirement into an industry-tenure one, and dropping 5 names reclassified into pharma shortly
+> before their gap. On the corrected sample the headline moves from −4.30% to −4.46%: immaterial.
+
+## Post-gap drift is real — and still not a trade for you
 
 Unlike the retracted first run, the negative drift now clears the pre-registered bar. Because this
-is an **affirmative** claim, it is stressed harder than the null was — and it survives everything:
+is an **affirmative** claim, it is stressed harder than the null was — and it survives everything
+(though see the amendment above: the effect is not specific to biotech):
 
 | stress test | mean | t(month) |
 |---|---:|---:|
@@ -84,10 +114,13 @@ mean now agree (−3.91% vs −4.30%), so it is broad-based, not a few disasters
   expensive or unavailable — most of all in the days right after a huge gap up, which is exactly
   when you would need it. Same limitation already recorded for the S&P 500 ADD leg in
   [index_effect_study.md](index_effect_study.md).
-- **The mechanism is not identified.** Post-gap names are lottery-like, and lottery stocks
+- ~~**The mechanism is not identified.** Post-gap names are lottery-like, and lottery stocks
   underperform in general (the MAX anomaly). This may be that well-known effect wearing a biotech
   costume rather than a catalyst-specific "sell the news." This study does not separate them, and
-  does not claim to.
+  does not claim to.~~ **RESOLVED by [gap_lottery_study.md](gap_lottery_study.md): it IS the
+  general effect. Non-biotech gappers bleed the same −3%, and the matched biotech-minus-control
+  difference is +0.28% (t = 0.01). The lottery/attention reading wins; the drug-specific reading
+  is rejected.**
 - **A CAR is a sum of simple abnormal returns**, so an individual event can print below −100% (4
   of them do). That is an arithmetic artifact, not a realized P&L; the robustness table above
   shows the result does not depend on those tails.

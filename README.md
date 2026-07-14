@@ -69,10 +69,13 @@ studies are written up in [docs/](docs/).
   2015–24 mega-cap regime — rejected under the frozen rule. **Biotech catalysts**: across 1,257
   overnight gaps ≥ +20% (2005–2024, survivorship-free), buying after the news earns **−4.30%**
   abnormal over 20 days net (clustering-robust t = −3.90, hit rate 40%) and −7.9% over 60 days —
-  the move is over before you can act, and then it bleeds. "Sell the news" is statistically real
-  but not retail-harvestable (it needs shorting hard-to-borrow small biotech). The money moves
-  *before* the announcement (+9.8% run-up), which is visible only in hindsight. An earlier run of
-  this study was wrong and is retracted in the write-up. **Copying the greats' 13F filings**:
+  the move is over before you can act, and then it bleeds. The money moves *before* the
+  announcement (+9.8% run-up), which is visible only in hindsight. An earlier run of this study
+  was wrong and is retracted in the write-up. **The drift is not about drugs**
+  ([docs/gap_lottery_study.md](docs/gap_lottery_study.md)): non-biotech stocks that gap ≥ +20%
+  bleed the same −3.0% (t = −4.54), and the matched biotech-minus-control difference is +0.28%
+  (t = 0.01) — so the biotech "sell the news" claim is rescoped into a broader and sturdier one,
+  *do not chase any +20% gap*, worse for small caps and for bigger jumps. **Copying the greats' 13F filings**:
   17 hindsight-selected legends (a God's-eye view the hypothesis could never have had), entered at
   the filing-date close — no edge at any horizon, and once size-matched to the benchmark the
   abnormal return is +1.1%/yr with t = 0.6, indistinguishable from zero. Patience does not rescue
