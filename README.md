@@ -65,11 +65,13 @@ studies are written up in [docs/](docs/).
   Daily top-gainer rotation is rejected at every reading (gross −29%, net −99.5% over 2005–2024 vs
   +724% for the benchmark). "Always hold the largest market cap" beats on raw return (+1210%) and
   DCA but fails risk-adjusted (Sharpe 0.60 vs 0.65), with all of its outperformance confined to the
-  2015–24 mega-cap regime — rejected under the frozen rule. **Biotech catalysts**: across 1,111
-  overnight gaps ≥ +20% (2005–2024, survivorship-free), buying after the news earns −1.64% abnormal
-  over 20 days net (clustering-robust t = −0.78, median −2.6%, hit rate 42%) — the move is over
-  before you can act, and the only robust effect is a +5.0% run-up *before* the announcement,
-  which is visible only in hindsight.
+  2015–24 mega-cap regime — rejected under the frozen rule. **Biotech catalysts**: across 1,257
+  overnight gaps ≥ +20% (2005–2024, survivorship-free), buying after the news earns **−4.30%**
+  abnormal over 20 days net (clustering-robust t = −3.90, hit rate 40%) and −7.9% over 60 days —
+  the move is over before you can act, and then it bleeds. "Sell the news" is statistically real
+  but not retail-harvestable (it needs shorting hard-to-borrow small biotech). The money moves
+  *before* the announcement (+9.8% run-up), which is visible only in hindsight. An earlier run of
+  this study was wrong and is retracted in the write-up.
 
 Also written up in [docs/](docs/): the first point-in-time factor read; event-time PEAD, small-cap
 PEAD, short-term reversal and overnight returns — each a real gross effect that is not
