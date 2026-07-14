@@ -203,6 +203,53 @@ def stream_industry(zip_path: str | Path, sic_codes: set[str], start, end,
     return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
 
 
+def stream_cusip_spells(zip_path: str | Path, start, end,
+                        block_size: int = 64 << 20) -> pd.DataFrame:
+    """Stream the daily CSV and collapse it to CUSIP -> PERMNO SPELLS: one row per
+    (permno, cusip9) with the first and last date CRSP carried that pairing.
+
+    13F holdings identify a security only by its 9-digit CUSIP, while every price panel here
+    is keyed by PERMNO. A CUSIP can be REUSED by a different issuer after a delisting, so the
+    join must be point-in-time: match a holding's CUSIP to the permno whose spell CONTAINS the
+    filing date, never to a permno that carried that CUSIP in some other decade. Keeps common
+    stock on a major exchange (the 13F universe that this repo can price); the caller reports
+    the share of holdings that fail to match.
+
+    Returns [permno, cusip9, cusip8, ticker, start, end]."""
+    cols = ["PERMNO", "DlyCalDt", "CUSIP9", "CUSIP", "Ticker",
+            "SecurityType", "SecuritySubType", "PrimaryExch"]
+    conv = pacsv.ConvertOptions(include_columns=cols,
+                                column_types={c: pa.string() for c in cols})
+    exch = pa.array(["N", "A", "Q"], type=pa.string())
+    parts: list[pa.Table] = []
+    with zipfile.ZipFile(zip_path) as z:
+        inner = _inner_csv_name(z)
+        with z.open(inner) as f:
+            reader = pacsv.open_csv(f, read_options=pacsv.ReadOptions(block_size=block_size),
+                                    convert_options=conv)
+            for batch in reader:
+                t = pa.Table.from_batches([batch])
+                t = t.filter(pc.and_kleene(
+                    pc.and_kleene(pc.equal(t["SecurityType"], "EQTY"),
+                                  pc.equal(t["SecuritySubType"], "COM")),
+                    pc.is_in(t["PrimaryExch"], value_set=exch)))
+                if t.num_rows:
+                    parts.append(t.drop_columns(["SecurityType", "SecuritySubType", "PrimaryExch"]))
+    if not parts:
+        return pd.DataFrame()
+    df = pa.concat_tables(parts).to_pandas()
+    df["date"] = pd.to_datetime(df["DlyCalDt"], errors="coerce")
+    df = df.dropna(subset=["date"])
+    df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
+    df = df[df["CUSIP9"].notna() & (df["CUSIP9"] != "")]
+    spells = (df.groupby(["PERMNO", "CUSIP9"])
+              .agg(cusip8=("CUSIP", "last"), ticker=("Ticker", "last"),
+                   start=("date", "min"), end=("date", "max"))
+              .reset_index().rename(columns={"PERMNO": "permno", "CUSIP9": "cusip9"}))
+    spells["permno"] = spells["permno"].astype(str)
+    return spells.sort_values(["cusip9", "start"]).reset_index(drop=True)
+
+
 def size_band_members_asof(mktcap: pd.DataFrame, exclude_top: int = 500, band_size: int = 2500):
     """Build `members_asof(date) -> set[str PERMNO]` = the cap-rank BAND [exclude_top,
     exclude_top+band_size) of `mktcap` on that date — i.e. drop the largest `exclude_top` names
