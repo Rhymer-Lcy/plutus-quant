@@ -40,12 +40,6 @@ def decompose_overnight(dlyret: pd.DataFrame, open_raw: pd.DataFrame,
     return overnight, intraday
 
 
-def abnormal(panel: pd.DataFrame) -> pd.DataFrame:
-    """Name return minus that day's equal-weight cross-sectional mean (the repo's CAAR
-    convention). The mean skips absent names, so it is the mean of the names alive that day."""
-    return panel.sub(panel.mean(axis=1), axis=0)
-
-
 def find_events(overnight: pd.DataFrame, close_raw: pd.DataFrame, threshold: float = 0.20,
                 min_history: int = 20, eligible: pd.DataFrame | None = None) -> pd.DataFrame:
     """Every (name, date) whose overnight gap is at least `threshold`.
@@ -122,20 +116,3 @@ def event_cars(events: pd.DataFrame, abn_cc: pd.DataFrame, abn_intra: pd.DataFra
             row[f"n_days_{h}"] = n_days
         rows.append(row)
     return pd.DataFrame(rows)
-
-
-def tstat(x: pd.Series) -> float:
-    """Plain t-stat of the mean against zero."""
-    x = x.dropna()
-    if len(x) < 2 or x.std(ddof=1) == 0:
-        return float("nan")
-    return float(x.mean() / (x.std(ddof=1) / np.sqrt(len(x))))
-
-
-def clustered_tstat(x: pd.Series, dates: pd.Series) -> float:
-    """Clustering-robust t-stat: average the events within each calendar MONTH first, then take
-    the t-stat across months. Biotech catalysts cluster in time (ASCO/ESMO, JPM healthcare week,
-    PDUFA dates), and an event-level t-stat treats such clustered events as independent draws,
-    overstating significance. The frozen verdict rule uses THIS statistic."""
-    g = pd.DataFrame({"x": x.to_numpy(), "m": pd.DatetimeIndex(dates).to_period("M")})
-    return tstat(g.groupby("m")["x"].mean())

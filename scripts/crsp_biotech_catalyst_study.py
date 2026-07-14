@@ -44,8 +44,8 @@ from scipy import stats
 
 from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
-from plutus.research.backtest.gap_events import (clustered_tstat, decompose_overnight, event_cars,
-                                                 find_events, tstat)
+from plutus.research.backtest.gap_events import decompose_overnight, event_cars, find_events
+from plutus.research.backtest.metrics import clustered_tstat, tstat
 
 PREFIX = "crsp_biotech"
 GAP_THRESHOLD = 0.20

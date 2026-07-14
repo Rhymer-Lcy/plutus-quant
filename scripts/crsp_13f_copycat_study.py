@@ -31,7 +31,8 @@ import pandas as pd
 from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.copycat import (basket_cars, concentration, new_positions,
-                                              quarterly_tstat, top_weights)
+                                              top_weights)
+from plutus.research.backtest.metrics import clustered_tstat
 from plutus.research.backtest.regime import cap_weighted_index
 
 HORIZONS = (21, 63, 252, 756)          # 1 month, 1 quarter, 1 year, 3 years
@@ -61,7 +62,8 @@ def _report(tag: str, cars: pd.DataFrame, h: int) -> dict:
     d = cars.loc[x.index, "filing_date"]
     return {"tag": tag, "n": len(x), "mean": float(x.mean()) if len(x) else np.nan,
             "median": float(x.median()) if len(x) else np.nan,
-            "t": quarterly_tstat(x, d), "hit": float((x > 0).mean()) if len(x) else np.nan}
+            "t": clustered_tstat(x, d, freq="Q"),      # 13F filings cluster on the 45-day deadline
+            "hit": float((x > 0).mean()) if len(x) else np.nan}
 
 
 def _print(rows: list[dict], title: str) -> None:
@@ -168,7 +170,7 @@ def main() -> None:
     for lo, hi, tag in [(0.01, 0.99, "winsorized 1%"), (0.05, 0.95, "winsorized 5%")]:
         w = x.clip(x.quantile(lo), x.quantile(hi))
         print(f"  {tag:>16}: mean {w.mean():+.2%}, t(qtr) "
-              f"{quarterly_tstat(w, a.loc[x.index, 'filing_date']):.2f}")
+              f"{clustered_tstat(w, a.loc[x.index, 'filing_date'], freq='Q'):.2f}")
     wins = int((x > 0).sum())
     print(f"  {'sign test':>16}: {wins:,}/{len(x):,} positive ({wins / len(x):.1%})")
     yr = a.groupby(a['filing_date'].dt.year)[col].mean()

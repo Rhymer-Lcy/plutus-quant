@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from plutus.research.backtest.copycat import (basket_cars, concentration, new_positions,
-                                              quarterly_tstat, top_weights)
+                                              top_weights)
 
 DATES = pd.bdate_range("2024-01-01", periods=300)
 
@@ -104,14 +104,3 @@ def test_delisted_name_keeps_the_days_it_traded():
     out = basket_cars(ev, abn, horizons=(20,), cost_per_side=0.0)
     assert out["n_days_20"].iloc[0] == 4              # days 11,12,13,14
     assert math.isclose(float(out["car_20"].iloc[0]), 0.04)
-
-
-def test_quarterly_clustering_deflates_a_deadline_driven_t_stat():
-    # 30 filings land on one 45-day deadline; two other quarters are flat. The event-level t
-    # treats the 30 as independent; the quarterly t must not.
-    dates = pd.Series([pd.Timestamp("2024-05-15")] * 30
-                      + [pd.Timestamp("2024-08-14"), pd.Timestamp("2024-11-14")])
-    x = pd.Series([0.05] * 30 + [0.001, -0.001])
-    naive = float(x.mean() / (x.std(ddof=1) / np.sqrt(len(x))))
-    assert naive > quarterly_tstat(x, dates)
-    assert quarterly_tstat(x, dates) < 2.0            # fails the frozen bar

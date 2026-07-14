@@ -4,8 +4,7 @@ import math
 import numpy as np
 import pandas as pd
 
-from plutus.research.backtest.gap_events import (abnormal, clustered_tstat, decompose_overnight,
-                                                 event_cars, find_events, tstat)
+from plutus.research.backtest.gap_events import (decompose_overnight, event_cars, find_events)
 
 DATES = pd.bdate_range("2024-01-01", periods=40)
 
@@ -40,13 +39,6 @@ def test_split_does_not_create_a_phantom_gap():
     dlyret = _panel([np.nan, 0.10])
     overnight, _ = decompose_overnight(dlyret, open_raw, close_raw)
     assert abs(float(overnight.iloc[1, 0])) < 1e-12
-
-
-def test_abnormal_removes_the_cross_sectional_mean():
-    panel = pd.DataFrame({"A": [0.10], "B": [0.00]}, index=DATES[:1])
-    abn = abnormal(panel)
-    assert math.isclose(float(abn.iloc[0]["A"]), 0.05)
-    assert math.isclose(float(abn.iloc[0]["B"]), -0.05)
 
 
 def test_find_events_thresholds_and_needs_history():
@@ -113,22 +105,3 @@ def test_delisted_name_contributes_only_the_days_it_traded():
     r = out.iloc[0]
     assert r["n_days_20"] == 3                     # days 6, 7, 8 only
     assert math.isclose(r["close_20"], 0.03)
-
-
-def test_clustered_tstat_collapses_same_month_events():
-    # Events inside ONE month are one independent observation, not many: no dispersion left.
-    dates = pd.Series([pd.Timestamp("2024-03-05")] * 10)
-    x = pd.Series([0.04, 0.05, 0.06] + [0.05] * 7)
-    assert math.isnan(clustered_tstat(x, dates))       # one monthly mean -> undefined
-    assert tstat(x) > 10                               # the naive t is confidently "significant"
-
-
-def test_clustering_deflates_a_conference_driven_t_stat():
-    # One conference month supplies 20 winners; two ordinary months are flat. The event-level t
-    # is inflated by treating the 20 clustered events as independent; the monthly t must be lower.
-    dates = pd.Series([pd.Timestamp("2024-06-05")] * 20
-                      + [pd.Timestamp("2024-07-05"), pd.Timestamp("2024-08-05")])
-    x = pd.Series([0.05] * 20 + [0.001, -0.001])
-    naive, clustered = tstat(x), clustered_tstat(x, dates)
-    assert naive > clustered                           # the whole point of the correction
-    assert clustered < 2.0                             # and it fails the frozen bar

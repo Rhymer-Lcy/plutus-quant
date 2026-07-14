@@ -98,16 +98,3 @@ def basket_cars(events: pd.DataFrame, abn: pd.DataFrame, horizons: tuple[int, ..
         out[f"car_{h}"] = cars
         out[f"n_days_{h}"] = ndays
     return out
-
-
-def quarterly_tstat(x: pd.Series, dates: pd.Series) -> float:
-    """Clustering-robust t-stat: average the events inside each calendar QUARTER first, then take
-    the t-stat across quarters. 13F filings pile up on the 45-day deadline, so an event-level t
-    treats hundreds of same-day filings as independent draws and badly overstates significance.
-    The frozen verdict rule uses THIS statistic."""
-    g = pd.DataFrame({"x": np.asarray(x, dtype=float),
-                      "q": pd.DatetimeIndex(dates).to_period("Q")}).dropna()
-    means = g.groupby("q")["x"].mean()
-    if len(means) < 2 or means.std(ddof=1) == 0:
-        return float("nan")
-    return float(means.mean() / (means.std(ddof=1) / np.sqrt(len(means))))
