@@ -32,7 +32,7 @@ dependencies = [
 # a script-only dependency, not imported by the importable package, so it's kept out of core deps.
 
 [project.optional-dependencies]
-dev = ["pytest"]
+dev = ["pytest", "ruff"]
 notebooks = ["jupyterlab"]
 # Paper/live trading via Alpaca (kept optional so research installs stay lean).
 broker = ["alpaca-py"]
