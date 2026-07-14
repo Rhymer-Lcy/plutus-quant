@@ -203,6 +203,57 @@ def stream_industry(zip_path: str | Path, sic_codes: set[str], start, end,
     return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
 
 
+def stream_sic_spells(zip_path: str | Path, start, end,
+                      block_size: int = 64 << 20) -> pd.DataFrame:
+    """Stream the daily CSV and collapse it to SIC SPELLS: one row per (permno, siccd) with the
+    first and last date CRSP carried that industry code for that name.
+
+    Industry must be POINT IN TIME. A company can be reclassified: CRSP codes some names into
+    pharma only late in life, and tagging an event by "was this name EVER a biotech" would count
+    gaps that happened while it was something else entirely -- 173 of them, in this window. The
+    spells let a study ask what the name WAS on the day of the event. Keeps common stock on a
+    major exchange (the universe the price panels cover).
+
+    Returns [permno, siccd, start, end]."""
+    cols = ["PERMNO", "DlyCalDt", "SICCD", "SecurityType", "SecuritySubType", "PrimaryExch"]
+    conv = pacsv.ConvertOptions(include_columns=cols,
+                                column_types={c: pa.string() for c in cols})
+    exch = pa.array(["N", "A", "Q"], type=pa.string())
+    parts: list[pa.Table] = []
+    with zipfile.ZipFile(zip_path) as z:
+        inner = _inner_csv_name(z)
+        with z.open(inner) as f:
+            reader = pacsv.open_csv(f, read_options=pacsv.ReadOptions(block_size=block_size),
+                                    convert_options=conv)
+            for batch in reader:
+                t = pa.Table.from_batches([batch])
+                t = t.filter(pc.and_kleene(
+                    pc.and_kleene(pc.equal(t["SecurityType"], "EQTY"),
+                                  pc.equal(t["SecuritySubType"], "COM")),
+                    pc.is_in(t["PrimaryExch"], value_set=exch)))
+                if t.num_rows:
+                    parts.append(t.drop_columns(["SecurityType", "SecuritySubType", "PrimaryExch"]))
+    if not parts:
+        return pd.DataFrame()
+    df = pa.concat_tables(parts).to_pandas()
+    df["date"] = pd.to_datetime(df["DlyCalDt"], errors="coerce")
+    df = df.dropna(subset=["date"])
+    df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
+    df = df[df["SICCD"].notna() & (df["SICCD"] != "")]
+    # CONTIGUOUS runs, not a min/max envelope per (permno, siccd): a company whose code goes
+    # A -> B -> A would otherwise get an "A" spell spanning B's whole period, so a date inside B
+    # would match BOTH spells and the event would be counted twice under two industries.
+    df = df.sort_values(["PERMNO", "date"], kind="stable")
+    change = (df["PERMNO"] != df["PERMNO"].shift()) | (df["SICCD"] != df["SICCD"].shift())
+    df["run"] = change.cumsum()
+    spells = (df.groupby("run")
+              .agg(permno=("PERMNO", "first"), siccd=("SICCD", "first"),
+                   start=("date", "min"), end=("date", "max"))
+              .reset_index(drop=True))
+    spells["permno"] = spells["permno"].astype(str)
+    return spells.sort_values(["permno", "start"]).reset_index(drop=True)
+
+
 def stream_cusip_spells(zip_path: str | Path, start, end,
                         block_size: int = 64 << 20) -> pd.DataFrame:
     """Stream the daily CSV and collapse it to CUSIP -> PERMNO SPELLS: one row per
@@ -248,6 +299,35 @@ def stream_cusip_spells(zip_path: str | Path, start, end,
               .reset_index().rename(columns={"PERMNO": "permno", "CUSIP9": "cusip9"}))
     spells["permno"] = spells["permno"].astype(str)
     return spells.sort_values(["cusip9", "start"]).reset_index(drop=True)
+
+
+def tag_sic_asof(events: pd.DataFrame, spells: pd.DataFrame,
+                 date_col: str = "date") -> pd.DataFrame:
+    """Attach to each row the SIC code CRSP carried for that permno ON THAT DATE.
+
+    Never tag an event by "what the company became": 4,698 of the 13,159 names in this window are
+    reclassified at least once, so a whole-life label would count a gap that happened while the
+    company was in another industry entirely. Rows whose (permno, date) falls in no spell are
+    DROPPED -- the caller reports the loss rather than guessing an industry."""
+    m = events.merge(spells[["permno", "siccd", "start", "end"]], on="permno", how="inner")
+    hit = (m[date_col] >= m["start"]) & (m[date_col] <= m["end"])
+    return m[hit].drop(columns=["start", "end"]).reset_index(drop=True)
+
+
+def sic_membership_panel(spells: pd.DataFrame, sic_codes: set[str], index: pd.DatetimeIndex,
+                         columns) -> pd.DataFrame:
+    """Boolean (date x permno) panel: was this name in `sic_codes` ON THAT DAY?
+
+    The peer group of an industry study is every name CLASSIFIED into the industry that day --
+    not the names that happen to have an event. Using event names as their own benchmark would
+    net the effect against itself."""
+    out = pd.DataFrame(False, index=index, columns=list(columns))
+    cols = set(out.columns)
+    sp = spells[spells["siccd"].isin(sic_codes)]
+    for permno, start, end in zip(sp["permno"], sp["start"], sp["end"]):
+        if permno in cols:
+            out.loc[start:end, permno] = True
+    return out
 
 
 def size_band_members_asof(mktcap: pd.DataFrame, exclude_top: int = 500, band_size: int = 2500):
