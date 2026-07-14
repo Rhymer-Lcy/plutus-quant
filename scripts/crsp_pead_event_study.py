@@ -52,7 +52,9 @@ def run(sue_threshold: float = 0.5, slippage_bps: float = 5.0, borrow_bps_annual
     spells = pd.read_parquet(PARQUET_DIR / "crsp_members.parquet")
     permno_to_ticker = {str(int(p)): t for p, t in zip(tmap_df["permno"], tmap_df["ticker"])}
     _m = crsp.members_asof_from_spells(spells)
-    members_asof = lambda d: {str(p) for p in _m(d)}
+
+    def members_asof(d):                          # the CRSP panels are keyed by str PERMNO
+        return {str(p) for p in _m(d)}
     ret = adj.pct_change(fill_method=None)
 
     print("building earnings-surprise events from SEC filings…")

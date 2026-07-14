@@ -109,7 +109,7 @@ def run(universe: str) -> list[dict]:
 
     # per-year + holdout on the 1y LS (the simple net-issuance horizon)
     r = ls_keep[252].dropna()
-    print(f"\n  1y-horizon LS net return by year (is any of it recent / does it survive a holdout?):")
+    print("\n  1y-horizon LS net return by year (is any of it recent / does it survive a holdout?):")
     yrs = sorted(set(r.index.year))
     print("   " + "  ".join(f"{y}:{((1+r[r.index.year==y]).prod()-1):+.0%}" for y in yrs))
     ymax = max(yrs)

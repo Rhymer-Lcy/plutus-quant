@@ -11,13 +11,12 @@ market-neutral long-short, net of costs. Caches the revision panels for later GR
 """
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 from plutus.data.sources import crsp_source as crsp
 from plutus.data.sources import ibes_source as ibes
 from plutus.io import atomic_to_parquet
-from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, RAW_DIR, ensure_dirs
+from plutus.paths import PARQUET_DIR, RAW_DIR, ensure_dirs
 from plutus.research.backtest.long_short import quantile_long_short
 from plutus.research.eval.factor_eval import compute_ic
 from plutus.research.backtest.metrics import month_ends
@@ -81,13 +80,13 @@ def run() -> dict:
     for nm, pnl in [("rev1", rev1), ("rev3", rev3), ("disp", dispersion)]:
         atomic_to_parquet(pnl, PARQUET_DIR / f"crsp_smallcap_{nm}.parquet")
 
-    print(f"\nstandalone rank IC vs next-month return (mid/small band):")
+    print("\nstandalone rank IC vs next-month return (mid/small band):")
     sigs = {"rev_1m": rev1, "rev_3m": rev3, "dispersion": dispersion}
     for name, s in sigs.items():
         ic = compute_ic(s, adj, eval_dates, band)
         print(f"  {name:12s} mean IC {ic.mean_ic:+.4f}  t {ic.t_stat:+.2f}  hit {ic.hit_rate:.2f}  n {ic.n_periods}")
 
-    print(f"\nrev_3m market-neutral quintile long-short, net of costs:")
+    print("\nrev_3m market-neutral quintile long-short, net of costs:")
     for label, slp, brw in [("low 5/50", 5.0, 50.0), ("realistic 15/300", 15.0, 300.0)]:
         r = quantile_long_short(adj, rev3, eval_dates, band, quantile=0.2,
                                 slippage_bps=slp, borrow_bps_annual=brw)

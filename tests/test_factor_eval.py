@@ -1,6 +1,5 @@
 """Single-factor evaluation: a factor that perfectly orders forward returns must show
 rank IC = +1 and a monotone-increasing quantile profile."""
-import numpy as np
 import pandas as pd
 
 from plutus.research.eval.factor_eval import compute_ic, quantile_returns

@@ -164,10 +164,12 @@ def main() -> int:
         hi_, lo_ = s.nlargest(k).index, s.nsmallest(k).index
         g = float(rn[hi_].mean() - rn[lo_].mean())
         c = 2.0 * (float(half_pit.loc[t, hi_].mean()) + float(half_pit.loc[t, lo_].mean()))  # round-trip both legs daily
-        g_ls.append(g); n_ls.append(g - c); dts.append(t)
+        g_ls.append(g)
+        n_ls.append(g - c)
+        dts.append(t)
     g_ls, n_ls = pd.Series(g_ls, index=dts), pd.Series(n_ls, index=dts)
     tg, _ = stats.ttest_1samp(g_ls, 0.0)
-    print(f"\n[6] cross-sectional overnight long-short (20d signal, dollar-neutral, daily):")
+    print("\n[6] cross-sectional overnight long-short (20d signal, dollar-neutral, daily):")
     print(f"  gross {g_ls.mean()*1e4:+.2f}bp/day (Sharpe {_sharpe(g_ls):+.2f}, ann {_ann(g_ls):+.1%}, "
           f"t={tg:+.1f})  ->  NET {n_ls.mean()*1e4:+.2f}bp/day (Sharpe {_sharpe(n_ls):+.2f}, ann {_ann(n_ls):+.1%})")
     print("  (overnight-only requires a round trip of the WHOLE book every day -- the daily spread "

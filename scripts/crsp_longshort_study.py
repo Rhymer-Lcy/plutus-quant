@@ -37,7 +37,9 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
     dates = adj.index
     permno_to_ticker = {str(int(p)): t for p, t in zip(tmap_df["permno"], tmap_df["ticker"])}
     _m = crsp.members_asof_from_spells(spells)
-    members_asof = lambda d: {str(p) for p in _m(d)}
+
+    def members_asof(d):                          # the CRSP panels are keyed by str PERMNO
+        return {str(p) for p in _m(d)}
 
     funds = build_panels(sorted(set(permno_to_ticker.values())), dates)
     ni = crsp.ticker_panel_to_permno(funds["net_income_ttm"], permno_to_ticker).reindex(index=dates, columns=adj.columns)

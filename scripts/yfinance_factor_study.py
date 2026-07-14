@@ -20,7 +20,7 @@ import argparse
 import pandas as pd
 
 from plutus.data import universe as uni
-from plutus.io import atomic_to_parquet, atomic_write_text
+from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.frictions import USEquityCosts
 from plutus.research.backtest.metrics import month_ends

@@ -56,7 +56,9 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
     dates = adj.index
     permno_to_ticker = {str(int(p)): t for p, t in zip(tmap_df["permno"], tmap_df["ticker"])}
     _m = crsp.members_asof_from_spells(spells)
-    members_asof = lambda d: {str(p) for p in _m(d)}
+
+    def members_asof(d):                          # the CRSP panels are keyed by str PERMNO
+        return {str(p) for p in _m(d)}
 
     print(f"building SUE PEAD signal (freshness {freshness_days}d) from SEC filings…")
     sue = build_sue_panel(permno_to_ticker, dates, freshness_days)
@@ -68,7 +70,7 @@ def run(quantile: float = 0.2, slippage_bps: float = 5.0, borrow_bps_annual: flo
 
     market = cap_weighted_index(adj, cap)
     ic = compute_ic(sue, adj, eval_dates, members_asof)
-    print(f"\nSUE rank IC vs next-month return:")
+    print("\nSUE rank IC vs next-month return:")
     print(f"  mean IC {ic.mean_ic:.4f}  IC-IR {ic.ic_ir:.3f}  t {ic.t_stat:.2f}  "
           f"hit {ic.hit_rate:.2f}  n {ic.n_periods}")
 

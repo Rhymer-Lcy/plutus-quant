@@ -11,7 +11,6 @@ optimistic; shows whether the lever helps at all.)
 """
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 
 from plutus.data.sources import crsp_source as crsp

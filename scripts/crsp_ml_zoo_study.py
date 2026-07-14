@@ -76,7 +76,9 @@ def _load(universe: str):
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
         spells = pd.read_parquet(PARQUET_DIR / "crsp_members.parquet")
         _m = crsp.members_asof_from_spells(spells)
-        members_asof = lambda d: {str(p) for p in _m(d)}
+
+        def members_asof(d):                      # the CRSP panels are keyed by str PERMNO
+            return {str(p) for p in _m(d)}
     return adj, cap, members_asof
 
 
@@ -109,7 +111,7 @@ def run(model: str = "lightgbm", universe: str = "smallcap", rebuild: bool = Fal
     # the limiter is cost-per-turnover, not the signal — sweep CONCENTRATION (extreme quantiles
     # have bigger per-name edge) x time-smoothing x cost, to find any net-positive cell.
     variants = {"raw": signal, "smooth3": signal.rolling(3, min_periods=1).mean()}
-    print(f"\nlong-short (monthly, market-neutral), net of costs:")
+    print("\nlong-short (monthly, market-neutral), net of costs:")
     print(f"{'signal':8s} {'q':>5s} {'costs':>16s} {'annRet':>8s} {'Sharpe':>7s} {'maxDD':>8s} {'turn':>6s}")
     rows = []
     for vname, sig in variants.items():

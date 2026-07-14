@@ -67,7 +67,6 @@ def run(sue_threshold: float = 1.0, slippage_bps: float = 5.0, borrow_bps_annual
     ensure_dirs()
     adj = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_adj_close.parquet").loc[:LAKE_END]
     cap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_mktcap.parquet").loc[:LAKE_END]
-    dates = adj.index
     members_asof = crsp.size_band_members_asof(cap)
     ret = adj.pct_change(fill_method=None)
 

@@ -101,9 +101,11 @@ def _trade_signal(pi: pd.Series, pj: pd.Series, signal: pd.Series, threshold: fl
             continue
         if pos == 0:
             if s > threshold:                                    # i rich -> short i, long j
-                pos = +1; rets.iloc[d + 1] -= 2 * slip
+                pos = +1
+                rets.iloc[d + 1] -= 2 * slip
             elif s < -threshold:                                 # i cheap -> long i, short j
-                pos = -1; rets.iloc[d + 1] -= 2 * slip
+                pos = -1
+                rets.iloc[d + 1] -= 2 * slip
         else:
             if (pos > 0 and s <= 0) or (pos < 0 and s >= 0):     # reverted through zero -> close
                 rets.iloc[d + 1] -= 2 * slip

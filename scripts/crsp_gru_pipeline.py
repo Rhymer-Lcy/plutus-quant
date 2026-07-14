@@ -67,7 +67,10 @@ def _build_sequences(adj, cap, members_asof, eval_dates, seq_len, volume=None, d
             target = fwd[i, j]
             if np.isnan(seq).any() or np.isnan(target):
                 continue
-            X.append(seq); y.append(target); di.append(i); tk.append(tickers[j])
+            X.append(seq)
+            y.append(target)
+            di.append(i)
+            tk.append(tickers[j])
     return (np.asarray(X, dtype=np.float32), np.asarray(y, dtype=np.float32),
             np.asarray(di), np.asarray(tk), cols, eval_dates)
 
@@ -115,7 +118,9 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
         cap = pd.read_parquet(PARQUET_DIR / "crsp_mktcap.parquet")
         spells = pd.read_parquet(PARQUET_DIR / "crsp_members.parquet")
         _m = crsp.members_asof_from_spells(spells)
-        members_asof = lambda d: {str(p) for p in _m(d)}
+
+        def members_asof(d):                      # the CRSP panels are keyed by str PERMNO
+            return {str(p) for p in _m(d)}
     eval_dates = month_ends(adj.index)
     print(f"{universe}: {adj.shape[1]} names, {len(eval_dates)} months, device={device}, "
           f"volume={'yes' if vol is not None else 'no'}, extra={sorted(extra)}")
@@ -159,7 +164,7 @@ def run(universe: str = "smallcap", seq_len: int = 12, min_train: int = 48, refr
     ic = compute_ic(signal, adj, eval_dates, members_asof)
     print(f"\nGRU OOS rank IC: mean {ic.mean_ic:.4f}  IC-IR {ic.ic_ir:.3f}  t {ic.t_stat:.2f}  "
           f"hit {ic.hit_rate:.2f}  n {ic.n_periods}")
-    print(f"\nlong-short (market-neutral), net of costs:")
+    print("\nlong-short (market-neutral), net of costs:")
     print(f"{'signal':8s} {'q':>5s} {'costs':>16s} {'annRet':>8s} {'Sharpe':>7s} {'turn':>6s}")
     variants = {"raw": signal, "smooth3": signal.rolling(3, min_periods=1).mean()}
     rows = []

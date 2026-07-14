@@ -17,12 +17,15 @@ import logging
 
 import pandas as pd
 
-logging.getLogger("yfinance").setLevel(logging.CRITICAL)   # quiet the per-ticker "delisted" noise
+# This MUST run before the plutus imports below, which pull in yfinance: the library installs its
+# own handler at import time, and silencing it afterwards no longer suppresses the per-ticker
+# "delisted" noise. Hence the deliberate import-after-statement (E402).
+logging.getLogger("yfinance").setLevel(logging.CRITICAL)
 
-from plutus.data import universe as uni
-from plutus.data.sources import yfinance_source as yfs
-from plutus.io import atomic_to_parquet
-from plutus.paths import PARQUET_DIR, ensure_dirs
+from plutus.data import universe as uni                      # noqa: E402
+from plutus.data.sources import yfinance_source as yfs       # noqa: E402
+from plutus.io import atomic_to_parquet                      # noqa: E402
+from plutus.paths import PARQUET_DIR, ensure_dirs            # noqa: E402
 
 
 def build(tickers: list[str], start: str, end: str) -> tuple[pd.DataFrame, pd.DataFrame]:

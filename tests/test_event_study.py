@@ -70,8 +70,6 @@ def test_intraday_entry_replaces_only_the_entry_day():
     intr = ret + 0.01                                  # intraday = close-to-close +1% every day
     base = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
                                 slippage_bps=0.0, borrow_bps_annual=0.0)
-    fast = event_time_portfolio(events, ret, hold_days=DRIFT_DAYS, sue_threshold=0.5,
-                                slippage_bps=0.0, borrow_bps_annual=0.0, intraday_entry=intr)
     # longs gain +1% on their entry day, shorts LOSE 1% (short leg is subtracted): with equal
     # long/short books the two entry-day effects cancel in the LS return only if entries align;
     # here they do (same entry dates), so isolate via a long-only event set instead.

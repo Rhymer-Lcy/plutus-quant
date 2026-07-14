@@ -41,7 +41,8 @@ def test_volume_features_present_and_no_lookahead():
         assert k in feats and feats[k].shape == close.shape
     # no-look-ahead for a volume feature: row 80 unchanged when the future is perturbed
     before = feats["amihud20"].iloc[80].copy()
-    vol2 = vol.copy(); vol2.iloc[100:] *= 3.0
+    vol2 = vol.copy()
+    vol2.iloc[100:] *= 3.0
     feats2 = build_features(close, mktcap=close * 1e3, volume=vol2, dollar_vol=vol2 * close)
     pd.testing.assert_series_equal(feats2["amihud20"].iloc[80], before, check_names=False)
 
