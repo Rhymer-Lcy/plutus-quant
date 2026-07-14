@@ -61,6 +61,32 @@ def test_find_events_thresholds_and_needs_history():
     assert math.isclose(float(ev["gap"].iloc[0]), 0.25)
 
 
+def test_eligibility_gates_the_event_day_only():
+    n = 30
+    overnight = _panel([0.0] * n)
+    close_raw = _panel([100.0] * n)
+    overnight.iloc[25, 0] = 0.25
+    overnight.iloc[27, 0] = 0.25
+    eligible = _panel([True] * n).astype(bool)
+    eligible.iloc[25, 0] = False          # untradable on the day of the first gap
+    ev = find_events(overnight, close_raw, threshold=0.20, min_history=20, eligible=eligible)
+    assert list(ev["date"]) == [DATES[27]]
+
+
+def test_holding_period_is_never_truncated_by_the_price_floor():
+    # The gap-up name craters afterwards. The floor gates the EVENT, not the holding period:
+    # those losses belong to whoever bought, and must still be counted.
+    n = 30
+    abn_cc = _panel([0.0] * n)
+    abn_cc.iloc[26:31, 0] = -0.10         # -10% abnormal every day after the event
+    abn_intra = _panel([0.0] * n)
+    hs = _panel([0.0] * n)
+    ev = pd.DataFrame({"date": [DATES[25]], "permno": ["A"], "gap": [0.25]})
+    out = event_cars(ev, abn_cc, abn_intra, hs, horizons=(4,))
+    assert math.isclose(float(out["close_4"].iloc[0]), -0.40)
+    assert out["n_days_4"].iloc[0] == 4
+
+
 def test_event_cars_sums_abnormal_and_charges_both_spreads():
     n = 20
     abn_cc = _panel([0.01] * n)                    # +1% abnormal every day

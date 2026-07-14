@@ -47,14 +47,22 @@ def abnormal(panel: pd.DataFrame) -> pd.DataFrame:
 
 
 def find_events(overnight: pd.DataFrame, close_raw: pd.DataFrame, threshold: float = 0.20,
-                min_history: int = 20) -> pd.DataFrame:
+                min_history: int = 20, eligible: pd.DataFrame | None = None) -> pd.DataFrame:
     """Every (name, date) whose overnight gap is at least `threshold`.
+
+    `eligible` is the TRADABILITY mask (price and market-cap floors) applied to the EVENT DAY
+    only: it decides whether the event could have been traded when it happened. It must NOT be
+    used to truncate the holding period -- a name that gaps up and then craters below the price
+    floor still hands its losses to whoever bought, and dropping those days would bias the
+    measured drift upward.
 
     `min_history` prior traded days are required so a freshly listed name's first noisy prints
     are not read as catalysts (an implementation choice fixed BEFORE any return was computed;
     the frozen design left it open). Returns a long frame [permno, date, gap], sorted."""
     history_ok = close_raw.notna().cumsum().shift(1) >= min_history
     hit = (overnight >= threshold) & history_ok & overnight.notna()
+    if eligible is not None:
+        hit &= eligible.reindex(index=hit.index, columns=hit.columns).fillna(False)
     ev = (overnight.where(hit).stack().rename("gap").reset_index()
           .rename(columns={"level_0": "date", "level_1": "permno"}))
     ev.columns = ["date", "permno", "gap"]
