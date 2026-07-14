@@ -63,6 +63,33 @@ def find_events(overnight: pd.DataFrame, close_raw: pd.DataFrame, threshold: flo
     return ev.sort_values(["date", "permno"]).reset_index(drop=True)
 
 
+def matched_difference(events: pd.DataFrame, value: str, treated: str,
+                       cells: tuple[str, ...]) -> pd.DataFrame:
+    """Mean treated-minus-control difference of `value`, computed WITHIN matching cells.
+
+    A cell is one combination of `cells` (e.g. quarter x cap tercile x gap tercile). Only cells
+    holding BOTH treated and control events contribute -- a cell with one side only says nothing
+    about a difference and is dropped rather than silently compared against the global mean.
+
+    Returns one row per contributing cell: [*cells, n_treated, n_control, mean_treated,
+    mean_control, diff, date]. `date` is the cell's mean event date, so the caller can cluster
+    the resulting differences in time the same way it clusters the levels."""
+    ev = events.dropna(subset=[value]).copy()
+    g = ev.groupby([*cells, treated])
+    agg = g.agg(n=(value, "size"), mean=(value, "mean"), date=("date", "min")).reset_index()
+    wide = agg.pivot_table(index=list(cells), columns=treated,
+                           values=["n", "mean", "date"], aggfunc="first")
+    both = wide["n"].notna().all(axis=1)
+    wide = wide[both]
+    out = pd.DataFrame({
+        "n_control": wide[("n", False)], "n_treated": wide[("n", True)],
+        "mean_control": wide[("mean", False)], "mean_treated": wide[("mean", True)],
+        "date": wide[("date", True)],
+    }).reset_index()
+    out["diff"] = out["mean_treated"] - out["mean_control"]
+    return out
+
+
 def _sum_available(series: np.ndarray) -> tuple[float, int]:
     """Sum the non-NaN entries and report how many there were (a delisted name simply has
     fewer -- the position ended when the name did)."""

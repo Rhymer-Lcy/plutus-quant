@@ -4,7 +4,8 @@ import math
 import numpy as np
 import pandas as pd
 
-from plutus.research.backtest.gap_events import (decompose_overnight, event_cars, find_events)
+from plutus.research.backtest.gap_events import (decompose_overnight, event_cars, find_events,
+                                                 matched_difference)
 
 DATES = pd.bdate_range("2024-01-01", periods=40)
 
@@ -92,6 +93,38 @@ def test_event_cars_sums_abnormal_and_charges_both_spreads():
     assert math.isclose(r["close_5_net"], 0.05 - 0.01)         # entry + exit half-spread
     assert math.isclose(r["runup"], 0.03)                      # 3 prior days x 1%
     assert r["n_days_5"] == 5
+
+
+def _matchable():
+    return pd.DataFrame({
+        "date": pd.to_datetime(["2024-01-05", "2024-01-06", "2024-02-05", "2024-02-06",
+                                "2024-03-05"]),
+        "cell": ["A", "A", "B", "B", "C"],
+        "bio":  [True, False, True, False, True],       # cell C has no control
+        "car":  [-0.10, -0.02, -0.06, -0.04, -0.99],
+    })
+
+
+def test_matched_difference_compares_within_cells_only():
+    out = matched_difference(_matchable(), value="car", treated="bio", cells=("cell",))
+    assert set(out["cell"]) == {"A", "B"}                # cell C is dropped: no control side
+    a = out[out["cell"] == "A"].iloc[0]
+    assert math.isclose(a["diff"], -0.10 - (-0.02))      # treated minus control, in-cell
+
+
+def test_matched_difference_ignores_an_unmatched_outlier():
+    # The -99% treated event sits alone in cell C; a naive pooled mean would be dominated by it.
+    out = matched_difference(_matchable(), value="car", treated="bio", cells=("cell",))
+    pooled = _matchable().groupby("bio")["car"].mean()
+    naive = pooled[True] - pooled[False]
+    assert naive < -0.3                                  # the outlier wrecks the naive contrast
+    assert out["diff"].mean() > -0.10                    # matching quarantines it
+
+
+def test_matched_difference_carries_a_date_for_clustering():
+    out = matched_difference(_matchable(), value="car", treated="bio", cells=("cell",))
+    assert pd.api.types.is_datetime64_any_dtype(out["date"])
+    assert set(out.columns) >= {"n_treated", "n_control", "mean_treated", "mean_control", "diff"}
 
 
 def test_delisted_name_contributes_only_the_days_it_traded():
