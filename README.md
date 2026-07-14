@@ -60,8 +60,9 @@ studies are written up in [docs/](docs/).
   index, so it is on watch, not validated.
 
 - **Pre-registered outside claims** ([docs/topgainer_study.md](docs/topgainer_study.md),
-  [docs/sp1_study.md](docs/sp1_study.md), [docs/biotech_catalyst_study.md](docs/biotech_catalyst_study.md))
-  — three claims from a friend, each frozen in a public issue (#1, #2, #3) before any code existed.
+  [docs/sp1_study.md](docs/sp1_study.md), [docs/biotech_catalyst_study.md](docs/biotech_catalyst_study.md),
+  [docs/copycat_13f_study.md](docs/copycat_13f_study.md))
+  — four claims from a friend, each frozen in a public issue (#1–#4) before any code existed.
   Daily top-gainer rotation is rejected at every reading (gross −29%, net −99.5% over 2005–2024 vs
   +724% for the benchmark). "Always hold the largest market cap" beats on raw return (+1210%) and
   DCA but fails risk-adjusted (Sharpe 0.60 vs 0.65), with all of its outperformance confined to the
@@ -71,7 +72,11 @@ studies are written up in [docs/](docs/).
   the move is over before you can act, and then it bleeds. "Sell the news" is statistically real
   but not retail-harvestable (it needs shorting hard-to-borrow small biotech). The money moves
   *before* the announcement (+9.8% run-up), which is visible only in hindsight. An earlier run of
-  this study was wrong and is retracted in the write-up.
+  this study was wrong and is retracted in the write-up. **Copying the greats' 13F filings**:
+  17 hindsight-selected legends (a God's-eye view the hypothesis could never have had), entered at
+  the filing-date close — no edge at any horizon, and once size-matched to the benchmark the
+  abnormal return is +1.1%/yr with t = 0.6, indistinguishable from zero. Patience does not rescue
+  it; Buffett's own new positions did not beat the market either.
 
 Also written up in [docs/](docs/): the first point-in-time factor read; event-time PEAD, small-cap
 PEAD, short-term reversal and overnight returns — each a real gross effect that is not
