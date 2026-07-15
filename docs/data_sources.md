@@ -32,7 +32,10 @@ Two distinct needs:
    does not currently close the delisted-price gap. The clean solution (Norgate / CRSP) is
    paid. The backtest engine already handles a name whose price series ends — it
    force-liquidates at the last real bar (`portfolio.valuation_panel`) — so the gap is *data
-   availability*, not engine logic. **This remains the top open data problem.**
+   availability*, not engine logic. **RESOLVED since: a licensed CRSP daily extract now supplies
+   survivorship-free prices with delisting returns (`data/sources/crsp_source.py`), and every
+   `crsp_*` study runs on it. The free-tier caveat above still applies to the yfinance-only
+   paths (the forward record and yfinance_factor_study).**
 2. **Point-in-time index membership.** "What was in the S&P 500 on 2018-03-31?" Free options:
    the current constituents from Wikipedia plus its change history, and community-maintained
    reconstructions on GitHub. These are approximate; the gold standard (CRSP/Norgate) is paid.

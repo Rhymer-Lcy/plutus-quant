@@ -34,8 +34,9 @@ and data layers have stabilized. Extract a shared core later, if duplication act
   (licensed survivorship-free extract), IBES (licensed estimates). No Alpaca adapter exists here.
 - the universe / point-in-time membership (S&P 500, from fja05680/sp500) — the hard, survivorship-
   sensitive part (see [data_sources.md](data_sources.md)). Nasdaq-100 is not implemented.
-- `live/feed.py` — EOD feed, built on yfinance. `execution/` — deferred Alpaca live gateway, an
-  unused stub; Alpaca supplies no data anywhere in the pipeline today.
+- `live/forward.py` — the EOD forward record's data path, built on yfinance (an earlier separate
+  feed module was retired as unused). `execution/` — deferred Alpaca live gateway, an unused
+  stub; Alpaca supplies no data anywhere in the pipeline today.
 
 ## No framework fork
 
