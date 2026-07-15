@@ -152,57 +152,6 @@ def stream_universe(zip_path: str | Path, start, end, price_min: float = 5.0,
     return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
 
 
-def stream_industry(zip_path: str | Path, sic_codes: set[str], start, end,
-                    block_size: int = 64 << 20) -> pd.DataFrame:
-    """Stream the daily CSV keeping COMMON stocks on a major exchange whose SIC code is in
-    `sic_codes` -- an INDUSTRY lake (pharma/biotech for the catalyst study, docs/biotech_catalyst_study.md).
-
-    DELIBERATELY NO price/cap filter, unlike `stream_universe`. A tradability gate belongs at
-    STUDY time (was this event tradable when it happened?), not in the lake: filtering rows out
-    of the lake would delete a name's history the moment it fell below the threshold, so a
-    biotech that gaps up and then craters past $5 would have its post-event LOSSES truncated --
-    an upward bias in exactly the quantity the study measures. The lake therefore keeps every
-    row and carries DlyClose and DlyCap so the study can gate on them.
-
-    Keeps the bar's OPEN and the quoted BID/ASK: the overnight gap needs the open, and a
-    catalyst-day spread in a small biotech is the dominant cost. SIC is the security's code AS
-    OF each row, so a reclassified name enters/leaves the industry on the CRSP date, not
-    retroactively (point-in-time by construction). Returns a tidy long frame."""
-    str_cols = ["PERMNO", "DlyCalDt", "Ticker", "SICCD", "DlyRet", "SecurityType",
-                "SecuritySubType", "PrimaryExch"]
-    float_cols = ["DlyClose", "DlyOpen", "DlyCap", "DlyPrcVol", "DlyBid", "DlyAsk"]
-    cols = str_cols + float_cols
-    conv = pacsv.ConvertOptions(
-        include_columns=cols,
-        column_types={**{c: pa.string() for c in str_cols}, **{c: pa.float64() for c in float_cols}})
-    exch = pa.array(["N", "A", "Q"], type=pa.string())
-    want_sic = pa.array(sorted(sic_codes), type=pa.string())
-    parts: list[pa.Table] = []
-    with zipfile.ZipFile(zip_path) as z:
-        inner = _inner_csv_name(z)
-        with z.open(inner) as f:
-            reader = pacsv.open_csv(f, read_options=pacsv.ReadOptions(block_size=block_size),
-                                    convert_options=conv)
-            for batch in reader:
-                t = pa.Table.from_batches([batch])
-                common = pc.and_kleene(
-                    pc.and_kleene(pc.equal(t["SecurityType"], "EQTY"),
-                                  pc.equal(t["SecuritySubType"], "COM")),
-                    pc.is_in(t["PrimaryExch"], value_set=exch))
-                t = t.filter(pc.and_kleene(common, pc.is_in(t["SICCD"], value_set=want_sic)))
-                if t.num_rows:
-                    parts.append(t.drop_columns(["SecurityType", "SecuritySubType", "PrimaryExch"]))
-    if not parts:
-        return pd.DataFrame()
-    df = pa.concat_tables(parts).to_pandas()
-    df["PERMNO"] = pd.to_numeric(df["PERMNO"], errors="coerce").astype("int64")
-    df["date"] = pd.to_datetime(df["DlyCalDt"], errors="coerce")
-    df["DlyRet"] = pd.to_numeric(df["DlyRet"], errors="coerce")
-    df = df.dropna(subset=["date"])
-    df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
-    return df.drop_duplicates(["PERMNO", "date"]).reset_index(drop=True)
-
-
 def stream_sic_spells(zip_path: str | Path, start, end,
                       block_size: int = 64 << 20) -> pd.DataFrame:
     """Stream the daily CSV and collapse it to SIC SPELLS: one row per (permno, siccd) with the

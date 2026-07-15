@@ -3,7 +3,19 @@
 Pre-registered as [issue #3](https://github.com/Rhymer-Lcy/plutus-quant/issues/3), frozen before
 any code existed. The question, raised by a friend's pancreatic-cancer example: **when a biotech
 catalyst hits the tape, can someone who acts AFTER the news still earn an abnormal return?**
-Reproduce: `python scripts/build_crsp_biotech_lake.py && python scripts/crsp_biotech_catalyst_study.py`.
+Reproduce: `python scripts/build_crsp_sic_map.py && python scripts/crsp_biotech_catalyst_study.py`.
+
+> **Correction, 2026-07-14 (data path).** This study was moved onto the shared market panels plus
+> the point-in-time SIC map — the same data path as the gap-lottery study (issue #5) — which
+> retired a redundant 108 MB biotech-only lake and its builder, and **fixed a subtler bug at its
+> source**. The old "≥ 20 prior traded days" gate was computed on that biotech lake, whose panel
+> only carried rows for the days a company was *classified* pharma, so it silently required 20 days
+> of industry **tenure** rather than 20 days of **price history**. On the correct panel the sample
+> is **1,262 events (not 1,257)** and the headline is **−4.46% (not −4.30%)**; the 5 recovered
+> names had been reclassified into pharma 0–15 trading days before their gap, each with 180–663
+> days of real price history. The tables below carry the earlier 1,257/−4.30% figures; the deltas
+> are immaterial and the verdict is unchanged, so they are annotated rather than rerun line by line.
+> Industry is now point-in-time throughout (4,698 of 13,159 names are reclassified at least once).
 
 > **Correction, 2026-07-13.** The first run of this study was WRONG and its numbers are retracted.
 > A post-run audit found two data bugs, both fixed here, both of which had biased the measured
@@ -84,11 +96,9 @@ bid/ask while a real catalyst-day opening spread is far wider.
 > gapping, not of trial data. Everything else on this page — that you cannot get in after the
 > news, that the money moves before the announcement, that the typical trade loses — stands.
 >
-> That study also **corrects the sample size** on this page: the correct count is **1,262**, not
-> 1,257. The "≥ 20 prior traded days" gate was computed on the biotech lake, whose panel only
-> carries rows for the days a company was *classified* pharma — silently turning a price-history
-> requirement into an industry-tenure one, and dropping 5 names reclassified into pharma shortly
-> before their gap. On the corrected sample the headline moves from −4.30% to −4.46%: immaterial.
+> That study's consistency check also surfaced the sample-size correction now documented at the
+> top of this page (1,262 events, headline −4.46%). The deltas are immaterial and do not touch
+> any conclusion here.
 
 ## Post-gap drift is real — and still not a trade for you
 

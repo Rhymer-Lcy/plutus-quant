@@ -11,60 +11,67 @@ terciles, and the two decades; inference = a clustering-robust t on MONTHLY mean
 
 VERDICT RULE (frozen): CONFIRMED only if the CLOSE-entry mean abnormal return at 20 days is
 positive NET of the round-trip half-spread with a clustering-robust t > 2. Otherwise REJECTED.
-A significantly negative drift is recorded separately as "sell the news" -- and flagged as NOT
-retail-harvestable (it needs shorting; small-biotech borrow is expensive or unavailable), the
-same limitation already recorded for the S&P 500 ADD leg in docs/index_effect_study.md.
 
-CORRECTION (2026-07-13). The first run of this study was WRONG and its results are retracted;
-two data bugs were found in a post-run audit and are fixed here (see docs/biotech_catalyst_study.md):
-  1. the SIC set omitted CRSP's GROUP-level drug codes 2830/2831, silently dropping 249 names --
-     Amgen among them, for 17 of its 20 years -- which biased the universe and the
-     cross-sectional benchmark, and lost events;
-  2. the price/cap floors were applied as a LAKE filter, which deleted a name's rows once it
-     fell below them -- truncating the post-event LOSSES of any biotech that gapped up and then
-     cratered, an upward bias in the very quantity being measured. The floors now gate EVENT
-     ELIGIBILITY only (was this event tradable when it happened?), never the holding period.
-The frozen DESIGN is unchanged; only its implementation is corrected.
+CORRECTIONS (see docs/biotech_catalyst_study.md for the full history):
+  - 2026-07-13: two data bugs from the first run were fixed -- the SIC set had omitted CRSP's
+    GROUP-level drug codes 2830/2831 (dropping Amgen for 17 years), and the price/cap floors had
+    been applied as a LAKE row filter, truncating the post-event losses of any name that cratered.
+  - 2026-07-14: this study was moved onto the SHARED market panels + the point-in-time SIC map,
+    the same data path as the gap-lottery study (issue #5). That retired a redundant 108 MB
+    biotech-only lake AND fixed a subtler bug at its source: the ">= 20 prior traded days" gate
+    used to be computed on the biotech lake, whose panel only carried rows for the days a company
+    was CLASSIFIED pharma, so it silently required 20 days of industry TENURE rather than 20 days
+    of PRICE HISTORY. On the correct panel the sample is 1,262 events (not 1,257) and the headline
+    is -4.46% (not -4.30%); the 5 recovered names had been reclassified into pharma 0-15 days
+    before their gap. Industry is now point-in-time (4,698 of 13,159 names are reclassified at
+    least once), so an event is tagged by what the company WAS on the day, never by what it became.
+
+The frozen DESIGN is unchanged throughout; only the data plumbing and the corrected counts move.
 
 Implementation choices the freeze left open, fixed BEFORE any return was computed: a name needs
-20 prior traded days for a gap to count as a catalyst (so a fresh listing's first noisy prints
-are not events); a position in a name that delists mid-window contributes the days it actually
-traded (CRSP's DlyRet carries the delisting return on the final day). CRSP quotes the CLOSING
-bid/ask, so the OPEN entry is charged a closing spread it would not really get on a catalyst
-day -- every open-entry NET figure below is therefore OPTIMISTIC.
+20 prior traded days for a gap to count as a catalyst; a position in a name that delists
+mid-window contributes the days it actually traded (CRSP's DlyRet carries the delisting return on
+the final day). CRSP quotes the CLOSING bid/ask, so the OPEN entry is charged a closing spread it
+would not really get on a catalyst day -- every open-entry NET figure below is OPTIMISTIC.
+
+Note: issue #5 (docs/gap_lottery_study.md) later showed this drift is NOT catalyst-specific --
+any stock that gaps up bleeds the same. This study still answers issue #3's own question (you
+cannot get in after the news), and its "sell the news" reading is amended there to "post-gap
+drift".
+
+Prereq: python scripts/build_crsp_sic_map.py
 
     conda activate plutus
     python scripts/crsp_biotech_catalyst_study.py
 """
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 from scipy import stats
 
+from plutus.data.sources.crsp_source import sic_membership_panel, tag_sic_asof
 from plutus.io import atomic_to_parquet
 from plutus.paths import BACKTESTS_DIR, PARQUET_DIR, ensure_dirs
 from plutus.research.backtest.gap_events import decompose_overnight, event_cars, find_events
 from plutus.research.backtest.metrics import clustered_tstat, tstat
 
-PREFIX = "crsp_biotech"
 GAP_THRESHOLD = 0.20
 HORIZONS = (1, 5, 10, 20, 60)
 VERDICT_HORIZON = 20
 PRICE_MIN, CAP_MIN = 5.0, 100e6        # the frozen tradability gate -- EVENT ELIGIBILITY only
-DRUG_SIC = {"2830", "2831", "2833", "2834", "2835", "2836"}   # post-hoc robustness split
+BIOTECH_SIC = {"2830", "2831", "2833", "2834", "2835", "2836", "8731"}   # identical to issue #5
+DRUG_SIC = {"2830", "2831", "2833", "2834", "2835", "2836"}   # post-hoc 283x-only split
 DECADES = [("2005-01-01", "2014-12-31"), ("2015-01-01", "2024-12-31")]
 
 
 def _load(name: str) -> pd.DataFrame:
-    return pd.read_parquet(PARQUET_DIR / f"{PREFIX}_{name}.parquet")
+    return pd.read_parquet(PARQUET_DIR / f"crsp_smallcap_{name}.parquet")
 
 
 def _report(tag: str, cars: pd.DataFrame, col: str) -> dict:
     x = cars[col]
-    ct = clustered_tstat(x, cars["date"])
     return {"tag": tag, "n": len(x), "mean": float(x.mean()), "median": float(x.median()),
-            "t_event": tstat(x), "t_clustered": ct,
+            "t_event": tstat(x), "t_clustered": clustered_tstat(x, cars["date"], freq="M"),
             "hit_rate": float((x > 0).mean())}
 
 
@@ -81,32 +88,35 @@ def main() -> None:
     ensure_dirs()
     dlyret, open_raw, close_raw = _load("dlyret"), _load("open_raw"), _load("close_raw")
     halfspread, mktcap = _load("halfspread"), _load("mktcap")
-    meta = _load("meta")
-    ticker = dict(zip(meta["permno"], meta["ticker"]))
-    sic = dict(zip(meta["permno"], meta["sic"]))
+    cap = mktcap.reindex_like(close_raw)
+    spells = pd.read_parquet(PARQUET_DIR / "crsp_sic_spells.parquet")
+    tmap = pd.read_parquet(PARQUET_DIR / "crsp_smallcap_ticker_map.parquet")
+    ticker = dict(zip(tmap["permno"].astype(str), tmap["ticker"]))
+
+    # Investable AND pharma/biotech ON THAT DAY. The membership panel is point-in-time, so the
+    # 20-prior-day history gate in find_events now counts real PRICE history (from close_raw's
+    # full series), not industry tenure -- the 2026-07-14 fix. The peer benchmark is this same
+    # biotech-investable set, so a sector-wide move is not credited to the event.
+    bio_member = sic_membership_panel(spells, BIOTECH_SIC, close_raw.index, close_raw.columns)
+    eligible = close_raw.ge(PRICE_MIN) & cap.ge(CAP_MIN) & bio_member
 
     overnight, intraday = decompose_overnight(dlyret, open_raw, close_raw)
-
-    # The tradability gate defines the INVESTABLE universe: the peer group the abnormal return is
-    # measured against, and which events could have been traded when they happened. It does NOT
-    # touch the holding period -- a name that craters below the floor after its gap still hands
-    # those losses to whoever bought it, so the event name's own path is always its FULL path
-    # (see gap_events.find_events).
-    eligible = (close_raw >= PRICE_MIN) & (mktcap.reindex_like(close_raw) >= CAP_MIN)
     abn_cc = dlyret.sub(dlyret.where(eligible).mean(axis=1), axis=0)
     abn_intra = intraday.sub(intraday.where(eligible).mean(axis=1), axis=0)
 
     events = find_events(overnight, close_raw, threshold=GAP_THRESHOLD, eligible=eligible)
     cars = event_cars(events, abn_cc, abn_intra, halfspread, HORIZONS)
     cars["year"] = pd.DatetimeIndex(cars["date"]).year
-    caps = [mktcap.at[d, p] if p in mktcap.columns and d in mktcap.index else np.nan
-            for d, p in zip(cars["date"], cars["permno"])]
-    cars["mktcap"] = caps
+    cars["mktcap"] = [cap.at[d, p] if p in cap.columns and d in cap.index else float("nan")
+                      for d, p in zip(cars["date"], cars["permno"])]
+    # SIC in force on the event day (point-in-time), for the 283x post-hoc split.
+    sic_on = tag_sic_asof(cars[["permno", "date"]], spells).set_index(["permno", "date"])["siccd"]
+    cars["siccd"] = [sic_on.get((p, d)) for p, d in zip(cars["permno"], cars["date"])]
 
     span = f"{events['date'].min().date()} -> {events['date'].max().date()}"
     per_year = cars.groupby("year").size()
     inv = eligible.sum(axis=1)
-    print(f"universe: {dlyret.shape[1]} pharma/biotech names ever; investable "
+    print(f"universe: pharma/biotech (point-in-time SIC); investable "
           f"(>= ${PRICE_MIN:.0f}, >= ${CAP_MIN / 1e6:.0f}M) per day: median {int(inv.median())}, "
           f"max {int(inv.max())}")
     print(f"events: {len(cars)} overnight gaps >= {GAP_THRESHOLD:.0%} in "
@@ -115,7 +125,7 @@ def main() -> None:
     print(f"  the gap itself (what you missed): mean {cars['gap'].mean():+.1%}, "
           f"median {cars['gap'].median():+.1%}, max {cars['gap'].max():+.1%}")
     print(f"  pre-event run-up (abnormal, t-10..t-1): mean {cars['runup'].mean():+.2%}, "
-          f"t(month) {clustered_tstat(cars['runup'], cars['date']):.2f}")
+          f"t(month) {clustered_tstat(cars['runup'], cars['date'], freq='M'):.2f}")
     print(f"  entry half-spread on the event day: median {cars['entry_halfspread'].median():.3%}")
 
     # --- the headline: what is left after the news, by horizon -------------------------
@@ -147,11 +157,11 @@ def main() -> None:
     _print_rows(rows, f"CLOSE entry, {VERDICT_HORIZON}d NET -- pre-registered sub-samples:")
 
     # POST-HOC robustness (labelled as such -- NOT part of the frozen verdict): the frozen SIC set
-    # included 8731 (commercial research), which the post-run audit showed also carries devices and
-    # CDMOs. Restricting to the drug manufacturers (283x) is the cleaner industry read.
-    drug = cars[cars["permno"].map(sic).isin(DRUG_SIC)]
-    _print_rows([_report("drug makers (283x)", drug, col),
-                 _report("research (8731)", cars[~cars["permno"].map(sic).isin(DRUG_SIC)], col)],
+    # included 8731 (commercial research), which also carries devices and CDMOs. Restricting to
+    # the drug manufacturers (283x) is the cleaner industry read. SIC is point-in-time here.
+    is_drug = cars["siccd"].isin(DRUG_SIC)
+    _print_rows([_report("drug makers (283x)", cars[is_drug], col),
+                 _report("research (8731)", cars[~is_drug], col)],
                 f"CLOSE entry, {VERDICT_HORIZON}d NET -- POST-HOC industry split (not the verdict):")
 
     biggest = cars.nlargest(6, "gap")
@@ -177,17 +187,18 @@ def main() -> None:
         return
     # A significantly NEGATIVE drift is an affirmative claim, so it gets stressed harder than the
     # null did. A CAR is a SUM of simple abnormal returns, so it can print below -100% on a name
-    # that collapses -- an arithmetic artifact, not a realized P&L; the checks below show the
-    # result does not depend on those tails, on any single year, or on the mean at all.
+    # that collapses -- an arithmetic artifact, not realized P&L. Issue #5 further shows this drift
+    # is not catalyst-specific (any gapper bleeds), so the "sell the news" label is amended there.
     x = cars[col]
-    print("\n  SELL-THE-NEWS: the drift is significantly NEGATIVE. Robustness of that claim:")
+    print("\n  POST-GAP DRIFT is significantly NEGATIVE (not biotech-specific -- see issue #5). "
+          "Robustness of the negative-drift claim:")
     for lo, hi, tag in [(0.01, 0.99, "winsorized 1%"), (0.05, 0.95, "winsorized 5%")]:
         w = x.clip(x.quantile(lo), x.quantile(hi))
         print(f"    {tag:>16}: mean {w.mean():+.2%}, t(month) "
-              f"{clustered_tstat(w, cars['date']):.2f}")
+              f"{clustered_tstat(w, cars['date'], freq='M'):.2f}")
     keep = x > -1.0
     print(f"    {'excl CAR < -100%':>16}: mean {x[keep].mean():+.2%}, t(month) "
-          f"{clustered_tstat(x[keep], cars.loc[keep, 'date']):.2f} "
+          f"{clustered_tstat(x[keep], cars.loc[keep, 'date'], freq='M'):.2f} "
           f"({(~keep).sum()} events dropped)")
     wins = int((x > 0).sum())
     p = stats.binomtest(wins, len(x), 0.5).pvalue
@@ -195,13 +206,6 @@ def main() -> None:
           f"binomial p = {p:.1e}")
     per_year = cars.groupby("year")[col].mean()
     print(f"    {'per-year':>16}: {(per_year < 0).sum()}/{len(per_year)} years negative")
-    print("    NOT a bid-ask bounce: a bounce is a one-day artifact, but the drift GROWS "
-          "monotonically with the horizon (see the table above).")
-    print("    NOT retail-harvestable: it needs shorting, and small-biotech borrow is expensive "
-          "or unavailable -- most of all right after a huge gap up.")
-    print("    Interpretation is NOT settled: post-gap names are lottery-like, and lottery "
-          "stocks underperform generally, so this may be the MAX/lottery anomaly rather than a "
-          "catalyst-specific effect. This study does not separate them.")
 
 
 if __name__ == "__main__":
